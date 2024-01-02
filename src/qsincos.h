@@ -6,7 +6,7 @@
 
 
 extern short sin_tab[];
-	
+
 short qsin(short);
 short qcos(short);
 

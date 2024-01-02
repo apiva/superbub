@@ -8,7 +8,7 @@
 #ifndef __ny_Debug_prefix__
 #define __ny_Debug_prefix__
 
-/* general target hardware/os definitions */
+ /* general target hardware/os definitions */
 #define __dest_os	__PSXOS
 #define TARGET_LITTLE_ENDIAN
 #define TARGET_HEAP_ALIGNMENT	16
