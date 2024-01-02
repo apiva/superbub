@@ -73,18 +73,31 @@ static int colorToInt(const Color color)
 	return (((int)color.a << 24) | ((int)color.b << 16) | ((int)color.g << 8) | (int)color.r);
 }
 
+std::shared_ptr<spdlog::sinks::sink> console_sink;
+std::shared_ptr<spdlog::logger> logger;
+
+static void traceLogCallback(int logLevel, const char* text, va_list args) {
+	static std::array<char, 4096> buffer;
+	vsnprintf(buffer.data(), buffer.size(), text, args);
+
+	const std::array<spdlog::level::level_enum, 8> levels{ spdlog::level::trace, spdlog::level::trace, spdlog::level::debug, spdlog::level::info, spdlog::level::warn, spdlog::level::err, spdlog::level::critical, spdlog::level::off };
+	const spdlog::level::level_enum level = levels.at(logLevel);
+	logger->log(level, buffer.data());
+}
+
 int main(int argc, char* argv[]) {
 	gflags::ParseCommandLineFlags(&argc, &argv, false);
 
-	std::shared_ptr<spdlog::sinks::sink> console_sink(new spdlog::sinks::stdout_color_sink_st);
-	std::shared_ptr<spdlog::logger> log(new spdlog::logger("tim2png", console_sink));
+	console_sink.reset(new spdlog::sinks::stdout_color_sink_st);
+	logger.reset(new spdlog::logger("tim2png", console_sink));
+	logger->set_level(spdlog::level::debug);
 
-	log->set_level(spdlog::level::debug);
+	SetTraceLogCallback(traceLogCallback);
 
-	log->info("Input filename: {}", FLAGS_input);
-	log->info("Output filename: {}", FLAGS_output);
+	logger->info("Input filename: {}", FLAGS_input);
+	logger->info("Output filename: {}", FLAGS_output);
 	if (FLAGS_input.empty() || FLAGS_output.empty()) {
-		log->error("Input or output path is empty, quitting");
+		logger->error("Input or output path is empty, quitting");
 		return 1;
 	}
 
@@ -94,38 +107,38 @@ int main(int argc, char* argv[]) {
 		std::ifstream stream(FLAGS_input, std::ios::binary);
 
 		if (stream.rdbuf()->sgetn(reinterpret_cast<char*>(&tim.timHeader), sizeof(TimHeader)) != sizeof(TimHeader)) {
-			log->error("Failed to read TIM header");
+			logger->error("Failed to read TIM header");
 			return 1;
 		}
 
 		if (stream.rdbuf()->sgetn(reinterpret_cast<char*>(&tim.clutHeader), sizeof(DataHeader)) != sizeof(DataHeader)) {
-			log->error("Failed to read CLUT header");
+			logger->error("Failed to read CLUT header");
 			return 1;
 		}
 
 		tim.clutData.resize(tim.clutHeader.width * tim.clutHeader.height);
 		if (stream.rdbuf()->sgetn(reinterpret_cast<char*>(tim.clutData.data()), sizeof(uint16_t) * tim.clutData.size()) != sizeof(uint16_t) * tim.clutData.size()) {
-			log->error("Failed to read CLUT data");
+			logger->error("Failed to read CLUT data");
 			return 1;
 		}
 
 		if (stream.rdbuf()->sgetn(reinterpret_cast<char*>(&tim.imageHeader), sizeof(DataHeader)) != sizeof(DataHeader)) {
-			log->error("Failed to read Image header");
+			logger->error("Failed to read Image header");
 			return 1;
 		}
 
 		tim.imageData.resize(tim.imageHeader.width * tim.imageHeader.height);
 		if (stream.rdbuf()->sgetn(reinterpret_cast<char*>(tim.imageData.data()), sizeof(uint16_t) * tim.imageData.size()) != sizeof(uint16_t) * tim.imageData.size()) {
-			log->error("Failed to read Image data");
+			logger->error("Failed to read Image data");
 			return 1;
 		}
 
-		log->info("File read successfully");
-		log->debug("TIM tag = {}, version = {}, flags = {}, colorMode = {}, hasClut = {}", tim.timHeader.tag, tim.timHeader.version, tim.timHeader.flags, getColorMode(tim.timHeader), hasClut(tim.timHeader));
-		log->debug("CLUT length = {}, x = {}, y = {}, width = {}, height = {}", tim.clutHeader.clutLength, tim.clutHeader.x, tim.clutHeader.y, tim.clutHeader.width, tim.clutHeader.height);
-		log->debug("CLUT data size = {}", sizeof(uint16_t) * tim.clutData.size());
-		log->debug("Image length = {}, x = {}, y = {}, width = {}, height = {}", tim.imageHeader.clutLength, tim.imageHeader.x, tim.imageHeader.y, tim.imageHeader.width, tim.imageHeader.height);
-		log->debug("Image data size = {}", sizeof(uint16_t) * tim.imageData.size());
+		logger->info("File read successfully");
+		logger->debug("TIM tag = {}, version = {}, flags = {}, colorMode = {}, hasClut = {}", tim.timHeader.tag, tim.timHeader.version, tim.timHeader.flags, getColorMode(tim.timHeader), hasClut(tim.timHeader));
+		logger->debug("CLUT length = {}, x = {}, y = {}, width = {}, height = {}", tim.clutHeader.clutLength, tim.clutHeader.x, tim.clutHeader.y, tim.clutHeader.width, tim.clutHeader.height);
+		logger->debug("CLUT data size = {}", sizeof(uint16_t) * tim.clutData.size());
+		logger->debug("Image length = {}, x = {}, y = {}, width = {}, height = {}", tim.imageHeader.clutLength, tim.imageHeader.x, tim.imageHeader.y, tim.imageHeader.width, tim.imageHeader.height);
+		logger->debug("Image data size = {}", sizeof(uint16_t) * tim.imageData.size());
 	}
 
 	Image image;
@@ -140,7 +153,7 @@ int main(int argc, char* argv[]) {
 		image.height = tim.imageHeader.height;
 		image.data = RL_MALLOC(sizeof(uint32_t) * image.width * image.height);
 
-		log->info("Color mode is 4-bit indices, resulting image width = {}, height = {}", image.width, image.height);
+		logger->info("Color mode is 4-bit indices, resulting image width = {}, height = {}", image.width, image.height);
 
 		int* pixel = reinterpret_cast<int*>(image.data);
 		for (const uint16_t value : tim.imageData) {
@@ -157,7 +170,7 @@ int main(int argc, char* argv[]) {
 		image.height = tim.imageHeader.height;
 		image.data = RL_MALLOC(sizeof(uint32_t) * image.width * image.height);
 
-		log->info("Color mode is 8-bit indices, resulting image width = {}, height = {}", image.width, image.height);
+		logger->info("Color mode is 8-bit indices, resulting image width = {}, height = {}", image.width, image.height);
 
 		int* pixel = reinterpret_cast<int*>(image.data);
 		for (const uint16_t value : tim.imageData) {
@@ -170,16 +183,16 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	else if (color_mode == ColorMode::Colors16bits) {
-		log->error("Color mode is 16-bit colors, not supported at the moment");
+		logger->error("Color mode is 16-bit colors, not supported at the moment");
 		return 1;
 	}
 	else if (color_mode == ColorMode::Colors24bits) {
-		log->error("Color mode is 24-bit colors, not supported at the moment");
+		logger->error("Color mode is 24-bit colors, not supported at the moment");
 		return 1;
 	}
 
 	if (!ExportImage(image, FLAGS_output.c_str())) {
-		log->error("Failed to export Image");
+		logger->error("Failed to export Image");
 		return 1;
 	}
 
