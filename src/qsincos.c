@@ -6,13 +6,12 @@
 
 
 
-#include <libps.h>
 #include "qsincos.h"
 
 
 
 short qsin(short a) {
-	u_short i = a & 0x03ff;
+	unsigned short i = a & 0x03ff;
 
 	if (a & 0x0400)
 		i = 0x03ff - i;

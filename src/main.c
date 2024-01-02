@@ -13,26 +13,26 @@
 // Types //
 
 typedef struct {
-	u_short pmode;
-	u_short x, y;
-	u_short w, h;
-	u_short tpage;
-	u_char u, v;
-	u_short cx, cy;
-	u_short cw, ch;
-	u_short cba;
+	unsigned short pmode;
+	unsigned short x, y;
+	unsigned short w, h;
+	unsigned short tpage;
+	unsigned char u, v;
+	unsigned short cx, cy;
+	unsigned short cw, ch;
+	unsigned short cba;
 } TIM;
 
 
 typedef struct {
-	u_short mode, mode2, timer;
+	unsigned short mode, mode2, timer;
 	short color;
 	short dest_y;
-	u_short len;
+	unsigned short len;
 	struct {
 		short x, y;
 		short vx, vy;
-		u_char u, v;
+		unsigned char u, v;
 	} chr[12];
 } ANI_TEXT;
 
@@ -45,79 +45,79 @@ typedef struct {
 #define MAX_ELIST (MAP_W*MAP_H)
 
 typedef struct {
-	u_short mode;
-	u_short elist_pos, elist_end;
-	u_short color;
-	u_short bright;
-	u_short x, y;
+	unsigned short mode;
+	unsigned short elist_pos, elist_end;
+	unsigned short color;
+	unsigned short bright;
+	unsigned short x, y;
 	short vx, vy;
 	struct {
-		u_char x, y;
+		unsigned char x, y;
 	} elist[MAX_ELIST];
 } EATER;
 
 typedef struct {
-	void (*mode_func)(u_short);
-	u_short type;
-	u_short timer;
-	u_short pause;
-	u_short wins;
-	u_short score;
+	void (*mode_func)(unsigned short);
+	unsigned short type;
+	unsigned short timer;
+	unsigned short pause;
+	unsigned short wins;
+	unsigned short score;
 	struct {
-		u_short select_flag;
-		u_short type;
-		u_short anim;
+		unsigned short select_flag;
+		unsigned short type;
+		unsigned short anim;
 		short oy, vy;
 	} monster;
 	struct {
-		u_short id;
-		u_short oy;
-		u_short ecolor;
+		unsigned short id;
+		unsigned short oy;
+		unsigned short ecolor;
 	} map[MAP_H][MAP_W];
-	u_short depth[MAP_W];
-	u_short min_depth, max_depth;
-	u_short empty;
-	u_short eaters;
+	unsigned short depth[MAP_W];
+	unsigned short min_depth, max_depth;
+	unsigned short empty;
+	unsigned short eaters;
 	EATER eater[MAX_EATERS];
-	u_short chains;
-	u_short eaten;
-	u_short attack;
-	u_short dump, dump_x, disp_dump;
+	unsigned short chains;
+	unsigned short eaten;
+	unsigned short attack;
+	unsigned short dump, dump_x, disp_dump;
 	struct {
-		u_short pos;
-		u_short oy;
+		unsigned short pos;
+		unsigned short oy;
 	} seq;
 	struct {
-		u_short time;
-		u_short pause;
-		u_short x;
+		unsigned short time;
+		unsigned short pause;
+		unsigned short x;
 		short ox;
-		u_short id1, id2;
-		u_short move, rotate;
+		unsigned short id1, id2;
+		unsigned short move, rotate;
 	} aim;
 	struct {
-		u_short x, y;
-		u_short oy;
+		unsigned short x, y;
+		unsigned short oy;
 	} magic[2];
 	struct {
-		u_short timer1, timer2;
-		u_short dest_x;
-		u_short rotate;
+		unsigned short timer1, timer2;
+		unsigned short dest_x;
+		unsigned short rotate;
 	} ai;
 } PLAYER;
 
 
 typedef struct {
-	u_short brains;
-	u_short think_time;
-	u_short rotate_time;
-	u_short fire_time;
+	unsigned short brains;
+	unsigned short think_time;
+	unsigned short rotate_time;
+	unsigned short fire_time;
 } LEVEL;
 
 
 typedef const struct {
 	char* name;
-	u_short color1, color2;
+	unsigned short color1, color2;
 } RANKING;
 
 
@@ -129,12 +129,12 @@ void init_title(void);
 void mode_title(void);
 void mode_select_players(void);
 void mode_select_level(void);
-void draw_title(short, short, u_short);
+void draw_title(short, short, unsigned short);
 void mode_select_monster(void);
-void plmode_select1(u_short);
-void plmode_select2(u_short);
-void plmode_select3(u_short);
-void plmode_select4(u_short);
+void plmode_select1(unsigned short);
+void plmode_select2(unsigned short);
+void plmode_select3(unsigned short);
+void plmode_select4(unsigned short);
 void mode_winner1(void);
 void mode_winner2(void);
 void init_ranking(void);
@@ -144,53 +144,53 @@ void init_rematch(void);
 void mode_rematch(void);
 void init_gameover(void);
 void mode_gameover(void);
-void display_monsticon(short, short, u_short, u_short, u_short);
+void display_monsticon(short, short, unsigned short, unsigned short, unsigned short);
 void mode_play(void);
-void update_player(u_short);
-void plmode_load(u_short);
-void cpu_player(u_short);
-void plmode_aim_v(u_short);
-void plmode_aim_h(u_short);
-void poll_player(u_short);
-void plmode_fire(u_short);
-void plmode_firemagic(u_short);
-void plmode_magic(u_short);
-void plmode_cfloat(u_short);
-void plmode_float(u_short);
-void plmode_ceat(u_short);
-void plmode_eat1(u_short);
-void plmode_eat2(u_short);
-void plmode_cdump(u_short);
-void plmode_dump(u_short);
-void lose_round(u_short);
-void plmode_win(u_short);
-void plmode_lose(u_short);
-u_short get_match(u_short, u_short, u_short, u_short);
-u_short get_score(u_short, u_short, u_short, u_short);
-void get_map_info(u_short);
-void draw_map(u_short);
-void draw_sequence(u_short);
-void draw_bubble(short, short, u_short);
-void display_stats(u_short);
-void draw_timebar(u_short);
+void update_player(unsigned short);
+void plmode_load(unsigned short);
+void cpu_player(unsigned short);
+void plmode_aim_v(unsigned short);
+void plmode_aim_h(unsigned short);
+void poll_player(unsigned short);
+void plmode_fire(unsigned short);
+void plmode_firemagic(unsigned short);
+void plmode_magic(unsigned short);
+void plmode_cfloat(unsigned short);
+void plmode_float(unsigned short);
+void plmode_ceat(unsigned short);
+void plmode_eat1(unsigned short);
+void plmode_eat2(unsigned short);
+void plmode_cdump(unsigned short);
+void plmode_dump(unsigned short);
+void lose_round(unsigned short);
+void plmode_win(unsigned short);
+void plmode_lose(unsigned short);
+unsigned short get_match(unsigned short, unsigned short, unsigned short, unsigned short);
+unsigned short get_score(unsigned short, unsigned short, unsigned short, unsigned short);
+void get_map_info(unsigned short);
+void draw_map(unsigned short);
+void draw_sequence(unsigned short);
+void draw_bubble(short, short, unsigned short);
+void display_stats(unsigned short);
+void draw_timebar(unsigned short);
 void draw_foreground(void);
 void draw_background(void);
 void init_game(void);
 void init_battle(void);
 void init_round(void);
-u_short random_bubble(void);
+unsigned short random_bubble(void);
 void kill_fx(void);
-void create_magicfx(short, short, u_short);
+void create_magicfx(short, short, unsigned short);
 void create_bubblefx(short, short);
 void update_fx(void);
 void kill_anitext(void);
-void init_anitext(u_short, short, char*, short, u_short, u_short, u_short);
+void init_anitext(unsigned short, short, char*, short, unsigned short, unsigned short, unsigned short);
 void update_anitext(void);
-void display_text(short, short, char*, u_short);
+void display_text(short, short, char*, unsigned short);
 void display_text2(short, short, char*, short);
 void read_pads(void);
 void process_pads(void);
-void start_sfx(u_short);
+void start_sfx(unsigned short);
 void update_sfx(void);
 void update_music(void);
 void initialize(void);
@@ -200,12 +200,12 @@ void init_sound(void);
 void init_sprite(TIM*, GsSPRITE*);
 void init_screen(void);
 void load_tim(char*, TIM*);
-short load_vab(u_long, char*, char*);
+short load_vab(unsigned long, char*, char*);
 void add_morphed_clut(TIM*, short, short, short, short, short, short, short, short, short);
 void wait_swap(void);
 
 
-u_short debug_flag = 1;
+unsigned short debug_flag = 1;
 
 
 // Screen & GPU Stuff //
@@ -220,17 +220,17 @@ u_short debug_flag = 1;
 
 #define PACKETAREA_SIZE 0x8000
 
-u_long packet_addr[2];
+unsigned long packet_addr[2];
 
 #define OT_LENGTH 1
 
 GsOT main_ot[2];
 GsOT_TAG main_tag[2][1 << OT_LENGTH];
 
-u_long frame = 0;
-u_short active;
-u_short cls_flag = 0;
-u_short code_hsync, draw_hsync, peak_hsync;
+unsigned long frame = 0;
+unsigned short active;
+unsigned short cls_flag = 0;
+unsigned short code_hsync, draw_hsync, peak_hsync;
 
 
 // Controller Stuff //
@@ -256,24 +256,24 @@ u_short code_hsync, draw_hsync, peak_hsync;
 #define PAD_LEFT 0x8000
 
 struct {
-	volatile u_char* buffer;
-	u_char connected;
-	u_char type;
-	u_short keys;
-	u_short previous;
-	u_short pulse;
-	u_short repeat;
-	u_short timer;
+	volatile unsigned char* buffer;
+	unsigned char connected;
+	unsigned char type;
+	unsigned short keys;
+	unsigned short previous;
+	unsigned short pulse;
+	unsigned short repeat;
+	unsigned short timer;
 } pad[2];
 
-u_short master_pad;
+unsigned short master_pad;
 
 
 // Dynamic Loading Stuff //
 
 #define LOADAREA_SIZE 0x40000
 
-u_long load_addr;
+unsigned long load_addr;
 GsIMAGE load_img;
 
 
@@ -284,7 +284,7 @@ GsIMAGE load_img;
 
 struct {
 	short id;
-	u_long vh_addr;
+	unsigned long vh_addr;
 } vab[2];
 
 #define MAX_SFX 18
@@ -305,16 +305,16 @@ struct {
 #define SFXMODE_BLOCK 4
 
 struct {
-	u_short type;
+	unsigned short type;
 	short prog, note;
-	u_short timer;
+	unsigned short timer;
 } sfx_chan[24];
 
 struct {
 	short prog, note;
 	short voll, volr;
-	u_short time;
-	u_short mode;
+	unsigned short time;
+	unsigned short mode;
 } sfx_tab[MAX_SFX] = {
 	0,61,120,120,6,SFXMODE_MONO,		// fire (player 0)
 	0,60,120,120,6,SFXMODE_MONO,		// fire (player 1)
@@ -339,8 +339,8 @@ struct {
 #define MAX_MUSIC 24
 
 struct {
-	u_short step;
-	u_short next;
+	unsigned short step;
+	unsigned short next;
 	short chan[3];
 } music;
 
@@ -403,8 +403,8 @@ char* title_name[3] = { "CONTEST","RATING","CHAMPION" };
 // Options Stuff //
 
 struct {
-	u_short players;
-	u_short level;
+	unsigned short players;
+	unsigned short level;
 } option = { 1,1 };
 
 
@@ -432,7 +432,7 @@ GsSPRITE screen_spt[7];
 
 TIM bg_tim;
 GsSPRITE bg_spt;
-u_short bg_bright;
+unsigned short bg_bright;
 
 TIM timebar_tim;
 GsSPRITE timebar_spt;
@@ -445,11 +445,11 @@ GsSPRITE wincup_spt;
 
 struct {
 	void (*mode_func)(void);
-	u_short timer1, timer2;
-	u_short players, level, colors;
-	u_short round;
-	u_short winner, loser;
-	u_short rank;
+	unsigned short timer1, timer2;
+	unsigned short players, level, colors;
+	unsigned short round;
+	unsigned short winner, loser;
+	unsigned short rank;
 } game;
 
 
@@ -470,7 +470,7 @@ PLAYER player[2];
 
 #define SEQUENCE_LENGTH 400
 
-u_char sequence[SEQUENCE_LENGTH];
+unsigned char sequence[SEQUENCE_LENGTH];
 
 #define MAX_PLANIM 6
 #define PLANIM_NORMAL 0
@@ -480,7 +480,7 @@ u_char sequence[SEQUENCE_LENGTH];
 #define PLANIM_TIME 4
 #define PLANIM_NEARLY 5
 
-const u_short anim_tab[MAX_PLANIM][16] = {
+const unsigned short anim_tab[MAX_PLANIM][16] = {
 	0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,
 	0,0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,
 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
@@ -545,8 +545,8 @@ GsSPRITE eater_spt;
 #define MAGIC_TYPE 2
 
 const struct {
-	u_short type;
-	u_short color;
+	unsigned short type;
+	unsigned short color;
 } id_tab[12] = {
 	BLANK_TYPE,0,
 	BUBBLE_TYPE,1,
@@ -562,7 +562,7 @@ const struct {
 	MAGIC_TYPE,0
 };
 
-const u_short score_tab[12][12] = {
+const unsigned short score_tab[12][12] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,
 	0,1,0,0,0,0,3,0,0,0,0,0,
 	0,0,1,0,0,0,0,3,0,0,0,0,
@@ -584,11 +584,11 @@ const u_short score_tab[12][12] = {
 
 struct {
 	short bright;
-	u_short speed;
+	unsigned short speed;
 	short x, y;
 } magicfx[MAX_MAGICFX];
 
-u_short next_magicfx = 0;
+unsigned short next_magicfx = 0;
 
 TIM bubblefx_tim;
 GsSPRITE bubblefx_spt;
@@ -601,17 +601,17 @@ struct {
 	short vx, vy;
 } bubblefx[MAX_BUBBLEFX];
 
-u_short next_bubblefx = 0;
+unsigned short next_bubblefx = 0;
 
 
 
 // Functions //
 
 main() {
-	u_long lclHeapStart = (_end & 0xfffffff0L) + 0x10;
-	u_long lclHeapSize = ((_stack_addr - (_stack_size << 10)) & 0xfffffff0L) - lclHeapStart;
+	unsigned long lclHeapStart = (_end & 0xfffffff0L) + 0x10;
+	unsigned long lclHeapSize = ((_stack_addr - (_stack_size << 10)) & 0xfffffff0L) - lclHeapStart;
 
-	InitHeap((u_long*)lclHeapStart, lclHeapSize);
+	InitHeap((unsigned long*)lclHeapStart, lclHeapSize);
 	//	printf("HeapStart=%8x\n",lclHeapStart);
 	//	printf("HeapSize=%x (%dK)\n",lclHeapSize,lclHeapSize>>10);
 
@@ -650,7 +650,7 @@ main() {
 			FntPrint("CODE HSYNC: %d\n", code_hsync);
 			FntPrint("DRAW HSYNC: %d\n", draw_hsync);
 			FntPrint("PEAK HSYNC: %d\n", peak_hsync);
-			FntPrint("PACKET MEM: %d\n", (u_long)GsGetWorkBase() - packet_addr[active]);
+			FntPrint("PACKET MEM: %d\n", (unsigned long)GsGetWorkBase() - packet_addr[active]);
 		}
 
 		wait_swap();
@@ -675,7 +675,7 @@ void init_intro(void) {
 
 
 void mode_intro(void) {
-	u_short ox, oy;
+	unsigned short ox, oy;
 
 	game.timer1++;
 	if (game.timer1 >= 350) {
@@ -790,7 +790,7 @@ void mode_title(void) {
 
 
 void mode_select_players(void) {
-	u_short p;
+	unsigned short p;
 
 	display_text(SCREEN_W2, 172, "1 PLAYER", (option.players == 1 && (frame & 8)) ? 1 : 0);
 	display_text(SCREEN_W2, 192, "2 PLAYERS", (option.players == 2 && (frame & 8)) ? 1 : 0);
@@ -853,9 +853,9 @@ void mode_select_level(void) {
 }
 
 
-void draw_title(short x, short y, u_short type) {
-	u_short i;
-	u_short c;
+void draw_title(short x, short y, unsigned short type) {
+	unsigned short i;
+	unsigned short c;
 
 	display_text2(x, y, "SUPER", (frame & 4) ? 11 : 12);
 
@@ -917,7 +917,7 @@ void draw_title(short x, short y, u_short type) {
 
 
 void mode_select_monster(void) {
-	u_short p;
+	unsigned short p;
 	char txt[12];
 
 	for (p = 0; p < 2; p++)
@@ -939,9 +939,9 @@ void mode_select_monster(void) {
 }
 
 
-void plmode_select1(u_short p) {
+void plmode_select1(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + SCREEN_W4;
+	unsigned short sx = p * SCREEN_W2 + SCREEN_W4;
 	short x, y;
 
 	y = 184 + pp->timer * 10;
@@ -961,9 +961,9 @@ void plmode_select1(u_short p) {
 }
 
 
-void plmode_select2(u_short p) {
+void plmode_select2(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + SCREEN_W4;
+	unsigned short sx = p * SCREEN_W2 + SCREEN_W4;
 
 	if (frame & 8)
 		display_text(sx, 120, "< SELECT >", 1);
@@ -990,9 +990,9 @@ void plmode_select2(u_short p) {
 }
 
 
-void plmode_select3(u_short p) {
+void plmode_select3(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + SCREEN_W4;
+	unsigned short sx = p * SCREEN_W2 + SCREEN_W4;
 	short x, y;
 
 	y = 184 + pp->timer * 10;
@@ -1015,10 +1015,10 @@ void plmode_select3(u_short p) {
 }
 
 
-void plmode_select4(u_short p) {
+void plmode_select4(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + SCREEN_W4;
-	u_short bright;
+	unsigned short sx = p * SCREEN_W2 + SCREEN_W4;
+	unsigned short bright;
 
 	pp->timer++;
 	display_text2(sx, 184, monster_name[pp->monster.type], -1);
@@ -1032,7 +1032,7 @@ void plmode_select4(u_short p) {
 void mode_winner1(void) {
 	PLAYER* pp = &player[game.winner];
 	short x;
-	u_short type;
+	unsigned short type;
 
 	x = SCREEN_W2 + (game.timer1 << 4);
 	type = (pp->type == PLTYPE_HUMAN) ? game.winner : 2;
@@ -1060,7 +1060,7 @@ void mode_winner1(void) {
 void mode_winner2(void) {
 	PLAYER* pp = &player[game.winner];
 	short x;
-	u_short type;
+	unsigned short type;
 
 	game.timer1++;
 	x = SCREEN_W2 - (game.timer1 << 4);
@@ -1184,7 +1184,7 @@ void mode_gameover(void) {
 }
 
 
-void display_monsticon(short x, short y, u_short type, u_short color, u_short bright) {
+void display_monsticon(short x, short y, unsigned short type, unsigned short color, unsigned short bright) {
 	monsticon_spt.x = x - 64;
 	monsticon_spt.y = y;
 	monsticon_spt.u = (type & 1) << 7;
@@ -1196,7 +1196,7 @@ void display_monsticon(short x, short y, u_short type, u_short color, u_short br
 
 
 void mode_play(void) {
-	u_short p;
+	unsigned short p;
 
 	music.next = (MAP_H << 1) - ((player[0].empty + player[1].empty) / MAP_W) + 1;
 
@@ -1231,9 +1231,9 @@ void mode_play(void) {
 }
 
 
-void update_player(u_short p) {
+void update_player(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + 32;
+	unsigned short sx = p * SCREEN_W2 + 32;
 
 	if (pp->pause) {
 		pp->pause--;
@@ -1256,7 +1256,7 @@ void update_player(u_short p) {
 }
 
 
-void plmode_ready(u_short p) {
+void plmode_ready(unsigned short p) {
 	PLAYER* pp = &player[p];
 
 	if (ani_text[1].mode == ATMODE_SPREAD) {
@@ -1267,7 +1267,7 @@ void plmode_ready(u_short p) {
 }
 
 
-void plmode_load(u_short p) {
+void plmode_load(unsigned short p) {
 	PLAYER* pp = &player[p];
 
 	get_map_info(p);
@@ -1294,14 +1294,14 @@ void plmode_load(u_short p) {
 }
 
 
-void cpu_player(u_short p) {
+void cpu_player(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short brains = level_tab[game.level].brains;
-	u_short x;
-	u_short ox;
-	u_short x1, y1, x2, y2;
-	u_short score;
-	u_short top_score = 0;
+	unsigned short brains = level_tab[game.level].brains;
+	unsigned short x;
+	unsigned short ox;
+	unsigned short x1, y1, x2, y2;
+	unsigned short score;
+	unsigned short top_score = 0;
 
 	pp->ai.dest_x = rand() % (MAP_W - 1);
 	pp->ai.rotate = rand() & 3;
@@ -1385,11 +1385,11 @@ void cpu_player(u_short p) {
 }
 
 
-void plmode_aim_v(u_short p) {
+void plmode_aim_v(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short x, y;
-	u_short temp;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short x, y;
+	unsigned short temp;
 
 	x = pp->aim.x;
 	draw_bubble((x << 4) + pp->aim.ox + sx, ((MAP_H2) << 4) + 24, pp->aim.id1);
@@ -1459,11 +1459,11 @@ void plmode_aim_v(u_short p) {
 }
 
 
-void plmode_aim_h(u_short p) {
+void plmode_aim_h(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short x, y;
-	u_short temp;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short x, y;
+	unsigned short temp;
 
 	x = pp->aim.x;
 	if (x > MAP_W - 2)
@@ -1541,7 +1541,7 @@ void plmode_aim_h(u_short p) {
 }
 
 
-void poll_player(u_short p) {
+void poll_player(unsigned short p) {
 	PLAYER* pp = &player[p];
 	LEVEL* lp = &level_tab[game.level];
 
@@ -1589,10 +1589,10 @@ void poll_player(u_short p) {
 }
 
 
-void plmode_fire(u_short p) {
+void plmode_fire(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short x, y;
-	u_short updated = 0;
+	unsigned short x, y;
+	unsigned short updated = 0;
 
 	for (y = 0; y < MAP_H; y++) {
 		for (x = 0; x < MAP_W; x++) {
@@ -1608,11 +1608,11 @@ void plmode_fire(u_short p) {
 }
 
 
-void plmode_firemagic(u_short p) {
+void plmode_firemagic(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short m;
-	u_short updated = 0;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short m;
+	unsigned short updated = 0;
 
 	for (m = 0; m < 2; m++) {
 		if (pp->magic[m].oy > 0) {
@@ -1628,11 +1628,11 @@ void plmode_firemagic(u_short p) {
 }
 
 
-void plmode_magic(u_short p) {
+void plmode_magic(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short x, y;
-	u_short id1, id2;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short x, y;
+	unsigned short id1, id2;
 
 	id1 = MAGIC_ID;
 	y = pp->magic[0].y;
@@ -1665,11 +1665,11 @@ void plmode_magic(u_short p) {
 }
 
 
-void plmode_cfloat(u_short p) {
+void plmode_cfloat(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short x, y;
-	u_short id;
-	u_short updated = 0;
+	unsigned short x, y;
+	unsigned short id;
+	unsigned short updated = 0;
 
 	for (y = 1; y < MAP_H; y++) {
 		for (x = 0; x < MAP_W; x++) {
@@ -1691,10 +1691,10 @@ void plmode_cfloat(u_short p) {
 }
 
 
-void plmode_float(u_short p) {
+void plmode_float(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short x, y;
-	u_short updated = 0;
+	unsigned short x, y;
+	unsigned short updated = 0;
 
 	for (y = 0; y < MAP_H; y++) {
 		for (x = 0; x < MAP_W; x++) {
@@ -1714,13 +1714,13 @@ void plmode_float(u_short p) {
 }
 
 
-void plmode_ceat(u_short p) {
+void plmode_ceat(unsigned short p) {
 	PLAYER* pp = &player[p];
 	EATER* ep;
-	u_short x, y;
-	u_short id;
-	u_short color;
-	u_short eat_flag;
+	unsigned short x, y;
+	unsigned short id;
+	unsigned short color;
+	unsigned short eat_flag;
 
 	pp->eaters = 0;
 	pp->eaten = 0;
@@ -1779,15 +1779,15 @@ void plmode_ceat(u_short p) {
 }
 
 
-void plmode_eat1(u_short p) {
+void plmode_eat1(unsigned short p) {
 	PLAYER* pp = &player[p];
 	EATER* ep;
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short e;
-	u_short x, y;
-	u_short color;
-	u_short elp, ele;
-	u_short eat_flag = 0;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short e;
+	unsigned short x, y;
+	unsigned short color;
+	unsigned short elp, ele;
+	unsigned short eat_flag = 0;
 
 	for (e = 0; e < pp->eaters; e++) {
 		ep = &pp->eater[e];
@@ -1870,12 +1870,12 @@ void plmode_eat1(u_short p) {
 }
 
 
-void plmode_eat2(u_short p) {
+void plmode_eat2(unsigned short p) {
 	PLAYER* pp = &player[p];
 	EATER* ep;
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short x, y;
-	u_short e;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short x, y;
+	unsigned short e;
 
 	for (e = 0; e < pp->eaters; e++) {
 		ep = &pp->eater[e];
@@ -1904,10 +1904,10 @@ void plmode_eat2(u_short p) {
 }
 
 
-void plmode_cdump(u_short p) {
+void plmode_cdump(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short x, y;
-	u_short id;
+	unsigned short x, y;
+	unsigned short id;
 	char txt[12];
 
 	if (pp->attack > 2) {
@@ -1960,10 +1960,10 @@ void plmode_cdump(u_short p) {
 }
 
 
-void plmode_dump(u_short p) {
+void plmode_dump(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short x, y;
-	u_short updated = 0;
+	unsigned short x, y;
+	unsigned short updated = 0;
 
 	for (y = 0; y < MAP_H; y++) {
 		for (x = 0; x < MAP_W; x++) {
@@ -1981,7 +1981,7 @@ void plmode_dump(u_short p) {
 }
 
 
-void lose_round(u_short p) {
+void lose_round(unsigned short p) {
 	game.winner = 1 - p;
 	game.loser = p;
 
@@ -2002,7 +2002,7 @@ void lose_round(u_short p) {
 }
 
 
-void plmode_win(u_short p) {
+void plmode_win(unsigned short p) {
 	if (ani_text[p << 1].mode == ATMODE_NULL) {
 		if (game.players) {
 			if (player[p].wins >= 2) {
@@ -2021,7 +2021,7 @@ void plmode_win(u_short p) {
 }
 
 
-void plmode_lose(u_short p) {
+void plmode_lose(unsigned short p) {
 	PLAYER* pp = &player[p];
 
 	if (pp->monster.oy == 0 && pp->monster.anim != PLANIM_DEAD) {
@@ -2031,9 +2031,9 @@ void plmode_lose(u_short p) {
 }
 
 
-u_short get_match(u_short p, u_short x, u_short y, u_short id) {
+unsigned short get_match(unsigned short p, unsigned short x, unsigned short y, unsigned short id) {
 	PLAYER* pp = &player[p];
-	u_short match = 0;
+	unsigned short match = 0;
 
 	if (x > 0 && score_tab[id][pp->map[y][x - 1].id] > 1)
 		return(1);
@@ -2045,10 +2045,10 @@ u_short get_match(u_short p, u_short x, u_short y, u_short id) {
 }
 
 
-u_short get_score(u_short p, u_short x, u_short y, u_short id) {
+unsigned short get_score(unsigned short p, unsigned short x, unsigned short y, unsigned short id) {
 	PLAYER* pp = &player[p];
-	u_short score;
-	u_short shift = p + 1;
+	unsigned short score;
+	unsigned short shift = p + 1;
 
 	score = MAP_H - y;
 	if (x > 0)
@@ -2067,10 +2067,10 @@ u_short get_score(u_short p, u_short x, u_short y, u_short id) {
 }
 
 
-void get_map_info(u_short p) {
+void get_map_info(unsigned short p) {
 	PLAYER* pp = &player[p];
 
-	u_short x, y;
+	unsigned short x, y;
 
 	pp->min_depth = MAP_H;
 	pp->max_depth = 0;
@@ -2087,10 +2087,10 @@ void get_map_info(u_short p) {
 }
 
 
-void draw_map(u_short p) {
+void draw_map(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short x, y;
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short x, y;
 
 	for (y = 0; y < MAP_H; y++) {
 		for (x = 0; x < MAP_W; x++)
@@ -2099,10 +2099,10 @@ void draw_map(u_short p) {
 }
 
 
-void draw_sequence(u_short p) {
+void draw_sequence(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = (p == 0) ? SCREEN_W2 - 24 : SCREEN_W2 + 8;
-	u_short s;
+	unsigned short sx = (p == 0) ? SCREEN_W2 - 24 : SCREEN_W2 + 8;
+	unsigned short s;
 
 	if (pp->seq.oy)
 		pp->seq.oy--;
@@ -2111,8 +2111,8 @@ void draw_sequence(u_short p) {
 }
 
 
-void draw_bubble(short x, short y, u_short id) {
-	u_short type, color;
+void draw_bubble(short x, short y, unsigned short id) {
+	unsigned short type, color;
 
 	if (id) {
 		type = id_tab[id].type;
@@ -2128,9 +2128,9 @@ void draw_bubble(short x, short y, u_short id) {
 }
 
 
-void display_stats(u_short p) {
+void display_stats(unsigned short p) {
 	PLAYER* pp = &player[p];
-	u_short sx = (p == 0) ? SCREEN_W2 - 24 : SCREEN_W2 + 8;
+	unsigned short sx = (p == 0) ? SCREEN_W2 - 24 : SCREEN_W2 + 8;
 	char txt[4];
 
 	if (pp->dump > pp->disp_dump)
@@ -2160,9 +2160,9 @@ void display_stats(u_short p) {
 }
 
 
-void draw_timebar(u_short p) {
-	u_short sx = p * SCREEN_W2 + 32;
-	u_short ti;
+void draw_timebar(unsigned short p) {
+	unsigned short sx = p * SCREEN_W2 + 32;
+	unsigned short ti;
 
 	ti = player[p].aim.time >> 3;
 	if (ti) {
@@ -2176,7 +2176,7 @@ void draw_timebar(u_short p) {
 
 
 void draw_foreground(void) {
-	u_short s;
+	unsigned short s;
 
 	for (s = 0; s < 7; s++)
 		GsSortFastSprite(&screen_spt[s], &main_ot[active], 0);
@@ -2185,7 +2185,7 @@ void draw_foreground(void) {
 
 void draw_background(void) {
 	short ox, oy;
-	u_short x, y;
+	unsigned short x, y;
 
 	if (music.step >= 16 && (frame % 50) == 25)
 		bg_bright = 12;
@@ -2210,7 +2210,7 @@ void draw_background(void) {
 
 
 void init_game(void) {
-	u_short p;
+	unsigned short p;
 
 	switch (game.players) {
 	case 0:
@@ -2265,8 +2265,8 @@ void init_game(void) {
 
 
 void init_battle(void) {
-	u_short p;
-	u_short type;
+	unsigned short p;
+	unsigned short type;
 
 	music.next = 1;
 	for (p = 0; p < 2; p++) {
@@ -2286,7 +2286,7 @@ void init_battle(void) {
 
 void init_round(void) {
 	PLAYER* pp;
-	u_short s, p, x, y;
+	unsigned short s, p, x, y;
 	char txt[12];
 
 	kill_anitext();
@@ -2328,13 +2328,13 @@ void init_round(void) {
 }
 
 
-u_short random_bubble(void) {
+unsigned short random_bubble(void) {
 	return(rand() % game.colors + (rand() % 4 ? BUBBLE_ID : FLAME_ID));
 }
 
 
 void kill_fx(void) {
-	u_short i;
+	unsigned short i;
 
 	for (i = 0; i < MAX_MAGICFX; i++)
 		magicfx[i].bright = 0;
@@ -2343,7 +2343,7 @@ void kill_fx(void) {
 }
 
 
-void create_magicfx(short x, short y, u_short speed) {
+void create_magicfx(short x, short y, unsigned short speed) {
 	magicfx[next_magicfx].bright = 128;
 	magicfx[next_magicfx].speed = speed;
 	magicfx[next_magicfx].x = x;
@@ -2363,7 +2363,7 @@ void create_bubblefx(short x, short y) {
 
 
 void update_fx(void) {
-	u_short i;
+	unsigned short i;
 
 	bubble_spt[2].u = ((frame & 15) << 4);
 	for (i = 0; i < MAX_MAGICFX; i++) {
@@ -2393,17 +2393,17 @@ void update_fx(void) {
 
 
 void kill_anitext(void) {
-	u_short id;
+	unsigned short id;
 
 	for (id = 0; id < 3; id++)
 		ani_text[id].mode = ATMODE_NULL;
 }
 
 
-void init_anitext(u_short id, short y, char* txt, short color,
-	u_short on_mode, u_short off_mode, u_short time) {
+void init_anitext(unsigned short id, short y, char* txt, short color,
+	unsigned short on_mode, unsigned short off_mode, unsigned short time) {
 	ANI_TEXT* ap = &ani_text[id];
-	u_short i, x;
+	unsigned short i, x;
 	char c;
 
 	ap->mode = on_mode;
@@ -2440,7 +2440,7 @@ void init_anitext(u_short id, short y, char* txt, short color,
 
 void update_anitext(void) {
 	ANI_TEXT* ap;
-	u_short a, i;
+	unsigned short a, i;
 
 	for (a = 0; a < 3; a++) {
 		ap = &ani_text[a];
@@ -2500,13 +2500,13 @@ void update_anitext(void) {
 }
 
 
-void display_text(short ox, short oy, char* txt, u_short color) {
+void display_text(short ox, short oy, char* txt, unsigned short color) {
 	char c;
 
 	font_spt.x = ox - (strlen(txt) << 2);
 	font_spt.y = oy;
 	font_spt.cy = font_tim.cy + color;
-	while (*txt != NULL && font_spt.x < SCREEN_W) {
+	while (*txt != '\0' && font_spt.x < SCREEN_W) {
 		c = (*txt++) - ' ';
 		if (c >= 1) {
 			font_spt.u = (c & 0x1f) << 3;
@@ -2520,7 +2520,7 @@ void display_text(short ox, short oy, char* txt, u_short color) {
 
 void display_text2(short ox, short oy, char* txt, short color) {
 	char c;
-	u_short cy;
+	unsigned short cy;
 
 	bigfont_spt.x = ox - (strlen(txt) << 3);
 	bigfont_spt.y = oy;
@@ -2528,7 +2528,7 @@ void display_text2(short ox, short oy, char* txt, short color) {
 		bigfont_spt.cy = bigfont_tim.cy + color;
 	else
 		cy = (frame >> 1) + (oy / 24);
-	while (*txt != NULL && bigfont_spt.x < SCREEN_W) {
+	while (*txt != '\0' && bigfont_spt.x < SCREEN_W) {
 		if (color < 0) {
 			cy %= 12;
 			bigfont_spt.cy = bigfont_tim.cy + cy++;
@@ -2545,7 +2545,7 @@ void display_text2(short ox, short oy, char* txt, short color) {
 
 
 void read_pads(void) {
-	u_short p;
+	unsigned short p;
 
 	for (p = 0; p < 2; p++) {
 		pad[p].connected = ~(*pad[p].buffer);
@@ -2581,7 +2581,7 @@ void read_pads(void) {
 
 
 void process_pads(void) {
-	u_short p, m;
+	unsigned short p, m;
 
 	for (p = 0; p < 2; p++) {
 		pad[p].pulse = 0;
@@ -2609,9 +2609,9 @@ void process_pads(void) {
 }
 
 
-void start_sfx(u_short type) {
+void start_sfx(unsigned short type) {
 	short c;
-	u_short noteon_flag = 0;
+	unsigned short noteon_flag = 0;
 	short prog, note;
 
 	for (c = 0; c < 24; c++) {
@@ -2644,7 +2644,7 @@ void start_sfx(u_short type) {
 
 
 void update_sfx(void) {
-	u_short c;
+	unsigned short c;
 
 	for (c = 0; c < 24; c++) {
 		if (sfx_chan[c].timer) {
@@ -2657,7 +2657,7 @@ void update_sfx(void) {
 
 
 void update_music(void) {
-	u_short c, p, v;
+	unsigned short c, p, v;
 
 	if ((frame % 100) == 0) {
 		for (c = 0; c < 3; c++) {
@@ -2718,7 +2718,7 @@ void init_memory(void) {
 
 
 void init_tims(void) {
-	u_short i;
+	unsigned short i;
 
 	load_tim("FONT01.TIM", &font_tim);
 	add_morphed_clut(&font_tim, 128, 0, 0, 128, 0, 0, 128, 0, 0);
@@ -2851,7 +2851,7 @@ void init_tims(void) {
 
 
 void init_sound(void) {
-	u_short i;
+	unsigned short i;
 
 	for (i = 0; i < 16; i++)
 		SsVabClose(i);
@@ -2924,7 +2924,7 @@ void load_tim(char* tim_file, TIM* tim) {
 
 	if (MWbload(tim_file, (void*)load_addr) > 0) {
 
-		GsGetTimInfo((u_long*)(load_addr + 4), &load_img);
+		GsGetTimInfo((unsigned long*)(load_addr + 4), &load_img);
 
 		tim->pmode = load_img.pmode & 3;
 		tim->x = load_img.px;
@@ -2979,7 +2979,7 @@ void load_tim(char* tim_file, TIM* tim) {
 }
 
 
-short load_vab(u_long vh_addr, char* vh_file, char* vb_file) {
+short load_vab(unsigned long vh_addr, char* vh_file, char* vb_file) {
 	short id = -1;
 
 	FntPrint("LOAD: %s\n", vh_file);
@@ -3008,10 +3008,10 @@ void add_morphed_clut(TIM* tim,
 	short rr, short rg, short rb,
 	short gr, short gg, short gb,
 	short br, short bg, short bb) {
-	u_short clut[256];
+	unsigned short clut[256];
 	RECT rect;
-	u_short c;
-	u_short t, sr, sg, sb;
+	unsigned short c;
+	unsigned short t, sr, sg, sb;
 	short r, g, b;
 
 	// Read CLUT
@@ -3019,7 +3019,7 @@ void add_morphed_clut(TIM* tim,
 	rect.y = tim->cy;
 	rect.w = tim->cw;
 	rect.h = 1;
-	StoreImage(&rect, (u_long*)&clut);
+	StoreImage(&rect, (unsigned long*)&clut);
 	DrawSync(0);
 
 	// Morph CLUT
@@ -3045,7 +3045,7 @@ void add_morphed_clut(TIM* tim,
 
 	// Write CLUT
 	rect.y = tim->cy + tim->ch++;
-	LoadImage(&rect, (u_long*)&clut);
+	LoadImage(&rect, (unsigned long*)&clut);
 	DrawSync(0);
 }
 
