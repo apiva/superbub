@@ -5,9 +5,7 @@
 //
 
 
-#include <libps.h>
-#include <__rts_info_t__.h>
-#include <MWDebugIO.h>
+#include "engine.h"
 
 
 // Types //
@@ -200,7 +198,7 @@ void init_sound(void);
 void init_sprite(TIM*, GsSPRITE*);
 void init_screen(void);
 void load_tim(char*, TIM*);
-short load_vab(unsigned long, char*, char*);
+short load_vab(uintptr_t, char*, char*);
 void add_morphed_clut(TIM*, short, short, short, short, short, short, short, short, short);
 void wait_swap(void);
 
@@ -220,7 +218,7 @@ unsigned short debug_flag = 1;
 
 #define PACKETAREA_SIZE 0x8000
 
-unsigned long packet_addr[2];
+uintptr_t packet_addr[2];
 
 #define OT_LENGTH 1
 
@@ -273,7 +271,7 @@ unsigned short master_pad;
 
 #define LOADAREA_SIZE 0x40000
 
-unsigned long load_addr;
+uintptr_t load_addr;
 GsIMAGE load_img;
 
 
@@ -608,8 +606,8 @@ unsigned short next_bubblefx = 0;
 // Functions //
 
 main() {
-	unsigned long lclHeapStart = (_end & 0xfffffff0L) + 0x10;
-	unsigned long lclHeapSize = ((_stack_addr - (_stack_size << 10)) & 0xfffffff0L) - lclHeapStart;
+	uintptr_t lclHeapStart = (_end & 0xfffffff0L) + 0x10;
+	uintptr_t lclHeapSize = ((_stack_addr - (_stack_size << 10)) & 0xfffffff0L) - lclHeapStart;
 
 	InitHeap((unsigned long*)lclHeapStart, lclHeapSize);
 	//	printf("HeapStart=%8x\n",lclHeapStart);
@@ -2876,7 +2874,7 @@ void init_sprite(TIM* tim, GsSPRITE* spt) {
 	spt->r = spt->g = spt->b = 128;
 	spt->mx = tim->w >> 1;
 	spt->my = tim->h >> 1;
-	spt->scalex = spt->scaley = ONE;
+	spt->scalex = spt->scaley = 1;
 	spt->rotate = 0;
 }
 
@@ -2979,7 +2977,7 @@ void load_tim(char* tim_file, TIM* tim) {
 }
 
 
-short load_vab(unsigned long vh_addr, char* vh_file, char* vb_file) {
+short load_vab(uintptr_t vh_addr, char* vh_file, char* vb_file) {
 	short id = -1;
 
 	FntPrint("LOAD: %s\n", vh_file);
