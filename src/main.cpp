@@ -2889,7 +2889,7 @@ void init_screen(void) {
 
 	SetVideoMode(MODE_PAL);
 	GsInitGraph(SCREEN_W, SCREEN_H, 0x0004, 0, 0);
-	GsDefDispBuff(0, 0, 0, 256);
+	GsDefDispBuff(0, 0, 0, SCREEN_H);
 	GsDISPENV.screen.x = 0;
 	GsDISPENV.screen.y = 20;
 	GsDISPENV.screen.h = SCREEN_H;
