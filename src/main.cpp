@@ -5,7 +5,11 @@
 //
 
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "engine.h"
+#include "qsincos.h"
 
 
 // Types //
@@ -198,7 +202,7 @@ void init_sound(void);
 void init_sprite(TIM*, GsSPRITE*);
 void init_screen(void);
 void load_tim(char*, TIM*);
-short load_vab(uintptr_t, char*, char*);
+short load_vab(void*, char*, char*);
 void add_morphed_clut(TIM*, short, short, short, short, short, short, short, short, short);
 void wait_swap(void);
 
@@ -218,7 +222,7 @@ unsigned short debug_flag = 1;
 
 #define PACKETAREA_SIZE 0x8000
 
-uintptr_t packet_addr[2];
+void* packet_addr[2];
 
 #define OT_LENGTH 1
 
@@ -271,7 +275,7 @@ unsigned short master_pad;
 
 #define LOADAREA_SIZE 0x40000
 
-uintptr_t load_addr;
+void* load_addr;
 GsIMAGE load_img;
 
 
@@ -282,7 +286,7 @@ GsIMAGE load_img;
 
 struct {
 	short id;
-	unsigned long vh_addr;
+	void* vh_addr;
 } vab[2];
 
 #define MAX_SFX 18
@@ -605,7 +609,7 @@ unsigned short next_bubblefx = 0;
 
 // Functions //
 
-main() {
+int main() {
 	uintptr_t lclHeapStart = (_end & 0xfffffff0L) + 0x10;
 	uintptr_t lclHeapSize = ((_stack_addr - (_stack_size << 10)) & 0xfffffff0L) - lclHeapStart;
 
@@ -648,7 +652,7 @@ main() {
 			FntPrint("CODE HSYNC: %d\n", code_hsync);
 			FntPrint("DRAW HSYNC: %d\n", draw_hsync);
 			FntPrint("PEAK HSYNC: %d\n", peak_hsync);
-			FntPrint("PACKET MEM: %d\n", (unsigned long)GsGetWorkBase() - packet_addr[active]);
+			FntPrint("PACKET MEM: %d\n", uintptr_t(GsGetWorkBase()) - uintptr_t(packet_addr[active]));
 		}
 
 		wait_swap();
@@ -2922,7 +2926,7 @@ void load_tim(char* tim_file, TIM* tim) {
 
 	if (MWbload(tim_file, (void*)load_addr) > 0) {
 
-		GsGetTimInfo((unsigned long*)(load_addr + 4), &load_img);
+		GsGetTimInfo((unsigned long*)(uintptr_t(load_addr) + 4), &load_img);
 
 		tim->pmode = load_img.pmode & 3;
 		tim->x = load_img.px;
@@ -2977,7 +2981,7 @@ void load_tim(char* tim_file, TIM* tim) {
 }
 
 
-short load_vab(uintptr_t vh_addr, char* vh_file, char* vb_file) {
+short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	short id = -1;
 
 	FntPrint("LOAD: %s\n", vh_file);
