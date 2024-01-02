@@ -52,40 +52,68 @@ struct DISPENV {
 
 struct PACKET;
 
+extern DISPENV GsDISPENV;
 extern long MODE_NTSC;
 extern long MODE_PAL;
 extern uintptr_t _end;
 extern uintptr_t _stack_addr;
 extern size_t _stack_size;
 
+///////////////////////
+// Display functions //
+///////////////////////
+
 void InitHeap(void* head, size_t size);
 long SetVideoMode(long mode);
 int DrawSync(int mode);
 int VSync(int mode);
+
+/////////////////////
+// Image functions //
+/////////////////////
+
 int ClearImage(RECT* recp, unsigned char r, unsigned char g, unsigned char b);
 int LoadImage(RECT* recp, unsigned long* p);
 int StoreImage(RECT* recp, unsigned long* p);
 int MWbload(const char* filename, void* memory);
 unsigned short GetClut(int x, int y);
 unsigned short GetTPage(int tp, int abr, int x, int y);
+
+///////////////////////
+// Gamepad functions //
+///////////////////////
+
 void GetPadBuf(volatile unsigned char** buf1, volatile unsigned char** buf2);
+
+///////////////////////////
+// Debug print functions //
+///////////////////////////
 
 int FntOpen(int x, int y, int w, int h, int isbg, int n);
 unsigned long* FntFlush(int id);
 void FntLoad(int tx, int ty);
 void FntPrint(const char* format, ...);
 
+////////////////////////
+// Graphics functions //
+////////////////////////
+
+void GsInitGraph(int x_res, int y_res, int intl, int dither, int vram);
+void GsDefDispBuff(int x0, int y0, int x1, int y1);
+
 int GsGetActiveBuff();
 PACKET* GsGetWorkBase();
 void GsClearOt(unsigned short offset, unsigned short point, GsOT* otp);
-void GsDefDispBuff(int x0, int y0, int x1, int y1);
 void GsDrawOt(GsOT* otp);
 void GsGetTimInfo(unsigned long* tim, GsIMAGE* im);
-void GsInitGraph(int x_res, int y_res, int intl, int dither, int vram);
 void GsSetWorkBase(PACKET* base_addr);
 void GsSortClear(unsigned char r, unsigned char g, unsigned char b, GsOT* otp);
 void GsSortFastSprite(GsSPRITE* sp, GsOT* otp, unsigned short pri);
 void GsSwapDispBuff();
+
+/////////////////////
+// Audio functions //
+/////////////////////
 
 short SsUtKeyOff(short voice, short vabId, short prog, short tone, short note);
 short SsUtKeyOn(short vabId, short prog, short tone, short note, short fine, short voll, short volr);
