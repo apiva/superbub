@@ -10,7 +10,15 @@
 #include <stdlib.h>
 #include "engine.h"
 #include "qsincos.h"
+#include <raylib.h>
+#include <spdlog/logger.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
+// Logs //
+
+static std::shared_ptr<spdlog::sinks::sink> consoleSink;
+static std::shared_ptr<spdlog::logger> raylibLog;
+static std::shared_ptr<spdlog::logger> gameLog;
 
 // Types //
 
@@ -648,11 +656,11 @@ int main() {
 		(*game.mode_func)();
 
 		if (debug_flag) {
-			FntPrint("FRAME: %d\n", frame);
-			FntPrint("CODE HSYNC: %d\n", code_hsync);
-			FntPrint("DRAW HSYNC: %d\n", draw_hsync);
-			FntPrint("PEAK HSYNC: %d\n", peak_hsync);
-			FntPrint("PACKET MEM: %d\n", uintptr_t(GsGetWorkBase()) - uintptr_t(packet_addr[active]));
+			gameLog->info("FRAME: {}", frame);
+			gameLog->info("CODE HSYNC: {}", code_hsync);
+			gameLog->info("DRAW HSYNC: {}", draw_hsync);
+			gameLog->info("PEAK HSYNC: {}", peak_hsync);
+			gameLog->info("PACKET MEM: {}", uintptr_t(GsGetWorkBase()) - uintptr_t(packet_addr[active]));
 		}
 
 		wait_swap();
@@ -2684,8 +2692,22 @@ void update_music(void) {
 	}
 }
 
+static void traceLogCallback(int logLevel, const char* text, va_list args) {
+	static std::array<char, 4096> buffer;
+	vsnprintf(buffer.data(), buffer.size(), text, args);
+
+	const std::array<spdlog::level::level_enum, 8> levels{ spdlog::level::trace, spdlog::level::trace, spdlog::level::debug, spdlog::level::info, spdlog::level::warn, spdlog::level::err, spdlog::level::critical, spdlog::level::off };
+	const spdlog::level::level_enum level = levels.at(logLevel);
+	raylibLog->log(level, buffer.data());
+}
 
 void initialize(void) {
+	consoleSink.reset(new spdlog::sinks::stdout_color_sink_mt);
+	raylibLog.reset(new spdlog::logger("raylib", consoleSink));
+	gameLog.reset(new spdlog::logger("game", consoleSink));
+
+	SetTraceLogCallback(&traceLogCallback);
+
 	init_memory();
 	init_screen();
 	GetPadBuf(&pad[0].buffer, &pad[1].buffer);
@@ -2695,9 +2717,6 @@ void initialize(void) {
 
 	init_tims();
 	init_sound();
-
-	FntLoad(960, 256);
-	FntOpen(16, 8, 256, 48, 0, 256);
 }
 
 
@@ -2910,9 +2929,6 @@ void init_screen(void) {
 	rect.y = 256;
 	ClearImage(&rect, 0, 0, 0);
 
-	FntLoad(960, 256);
-	FntOpen(16, 8, 256, 48, 1, 256);
-
 	wait_swap();
 }
 
@@ -2920,8 +2936,8 @@ void init_screen(void) {
 void load_tim(char* tim_file, TIM* tim) {
 	RECT rect;
 
-	FntPrint("LOAD: %s\n", tim_file);
-	FntPrint("ADDR: %X", load_addr);
+	gameLog->info("LOAD: {}", tim_file);
+	gameLog->info("ADDR: {}", load_addr);
 	wait_swap();
 
 	if (MWbload(tim_file, (void*)load_addr) > 0) {
@@ -2984,12 +3000,12 @@ void load_tim(char* tim_file, TIM* tim) {
 short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	short id = -1;
 
-	FntPrint("LOAD: %s\n", vh_file);
-	FntPrint("ADDR: %X", vh_addr);
+	gameLog->info("LOAD: {}", vh_file);
+	gameLog->info("ADDR: {}", vh_addr);
 	wait_swap();
 	if (MWbload(vh_file, (void*)vh_addr) > 0) {
-		FntPrint("LOAD: %s\n", vb_file);
-		FntPrint("ADDR: %X", load_addr);
+		gameLog->info("LOAD: {}", vb_file);
+		gameLog->info("ADDR: {}", load_addr);
 		wait_swap();
 		if (MWbload(vb_file, (void*)load_addr) > 0) {
 			id = SsVabTransfer((void*)vh_addr, (void*)load_addr, -1, 1);
@@ -3054,7 +3070,7 @@ void add_morphed_clut(TIM* tim,
 
 void wait_swap(void) {
 	if (debug_flag) {
-		FntFlush(-1);
+		gameLog->flush();
 	}
 	code_hsync = VSync(1);
 	DrawSync(0);

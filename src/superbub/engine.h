@@ -85,15 +85,6 @@ unsigned short GetTPage(int tp, int abr, int x, int y);
 
 void GetPadBuf(volatile unsigned char** buf1, volatile unsigned char** buf2);
 
-///////////////////////////
-// Debug print functions //
-///////////////////////////
-
-int FntOpen(int x, int y, int w, int h, int isbg, int n);
-unsigned long* FntFlush(int id);
-void FntLoad(int tx, int ty);
-void FntPrint(const char* format, ...);
-
 ////////////////////////
 // Graphics functions //
 ////////////////////////
