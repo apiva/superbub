@@ -6,7 +6,7 @@ add_subdirectory( ext/raylib EXCLUDE_FROM_ALL )
 add_subdirectory( ext/spdlog EXCLUDE_FROM_ALL )
 add_subdirectory( ext/gflags EXCLUDE_FROM_ALL )
 
-add_executable( superbub src/superbub/main.cpp src/superbub/qsincos.cpp src/superbub/qsincos.h src/superbub/engine.cpp src/superbub/engine.h )
+add_executable( superbub src/superbub/main.cpp src/superbub/qsincos.cpp src/superbub/qsincos.h src/superbub/engine.h )
 target_link_libraries( superbub PUBLIC raylib spdlog )
 
 add_executable( tim2png src/tim2png/tim2png.cpp )
