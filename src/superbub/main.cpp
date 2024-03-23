@@ -216,8 +216,6 @@ unsigned short debug_flag = 1;
 
 #define PACKETAREA_SIZE 0x8000
 
-void* packet_addr[2];
-
 #define OT_LENGTH 1
 
 GsOT main_ot[2];
@@ -616,11 +614,9 @@ int main() {
 		camera.zoom = 1;
 
 		BeginDrawing();
-		BeginMode2D(camera);
+		ClearBackground(BLACK);
 
-		active = GsGetActiveBuff();
-		GsSetWorkBase((PACKET*)packet_addr[active]);
-		GsClearOt(0, 0, &main_ot[active]);
+		BeginMode2D(camera);
 
 		read_pads();
 		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
@@ -640,7 +636,6 @@ int main() {
 
 		if (debug_flag) {
 			gameLog->info("FRAME: {}", frame);
-			gameLog->info("PACKET MEM: {}", uintptr_t(GsGetWorkBase()) - uintptr_t(packet_addr[active]));
 		}
 
 		EndMode2D();

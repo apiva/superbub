@@ -27,34 +27,9 @@ struct GsOT {
 	GsOT_TAG* tag;
 };
 
-struct PACKET;
-
-/////////////////////
-// Image functions //
-/////////////////////
-
 int MWbload(const char* filename, void* memory);
-
-///////////////////////
-// Gamepad functions //
-///////////////////////
-
 void GetPadBuf(volatile unsigned char** buf1, volatile unsigned char** buf2);
-
-////////////////////////
-// Graphics functions //
-////////////////////////
-
-int GsGetActiveBuff();
-PACKET* GsGetWorkBase();
-void GsClearOt(unsigned short offset, unsigned short point, GsOT* otp);
-void GsSetWorkBase(PACKET* base_addr);
-void GsSortClear(unsigned char r, unsigned char g, unsigned char b, GsOT* otp);
 void GsSortFastSprite(GsSPRITE* sp, GsOT* otp, unsigned short pri);
-
-/////////////////////
-// Audio functions //
-/////////////////////
 
 short SsUtKeyOff(short voice, short vabId, short prog, short tone, short note);
 short SsUtKeyOn(short vabId, short prog, short tone, short note, short fine, short voll, short volr);
