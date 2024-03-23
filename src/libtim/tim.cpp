@@ -45,7 +45,7 @@ static bool hasClut(const TimHeader& header) {
 	return bool((header.flags >> 3) & 0b1);
 }
 
-static Color getColorFromClut(const Clut& clut, const int index) {
+static Color getColorFromClut(const Clut& clut, const int index, const bool special_trasparency_bit) {
 	const uint16_t value = clut.at(index);
 	const unsigned int r = (value >> 0) & 0b11111;
 	const unsigned int g = (value >> 5) & 0b11111;
@@ -57,7 +57,12 @@ static Color getColorFromClut(const Clut& clut, const int index) {
 	color.r = r << 3;
 	color.g = g << 3;
 	color.b = b << 3;
-	color.a = is_black ? (t ? 255 : 0) : (t ? 0 : 255);
+	if (special_trasparency_bit) {
+		color.a = t ? 255 : 0;
+	}
+	else {
+		color.a = is_black ? (t ? 255 : 0) : (t ? 0 : 255);
+	}
 
 	return color;
 }
@@ -130,11 +135,11 @@ Tim& Tim::operator=(Tim&& other) {
 	return *this;
 }
 
-Tim Tim::load(const std::filesystem::path& path) {
-	return Tim::loadWithMorphedCluts(path, {});
+Tim Tim::load(const std::filesystem::path& path, const bool special_trasparency_bit) {
+	return Tim::loadWithMorphedCluts(path, {}, special_trasparency_bit);
 }
 
-Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts) {
+Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts, const bool special_trasparency_bit) {
 	TimFile timfile;
 
 	{
@@ -221,7 +226,7 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 				for (const uint16_t value : timfile.imageData) {
 					for (const unsigned int offset : {0, 4, 8, 12}) {
 						const int index = (value >> offset) & 0b1111;
-						const Color color = getColorFromClut(clut, index);
+						const Color color = getColorFromClut(clut, index, special_trasparency_bit);
 						*pixel = colorToInt(color);
 						++pixel;
 					}
@@ -232,7 +237,7 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 				for (const uint16_t value : timfile.imageData) {
 					for (const unsigned int offset : {0, 8}) {
 						const int index = (value >> offset) & 0b11111111;
-						const Color color = getColorFromClut(clut, index);
+						const Color color = getColorFromClut(clut, index, special_trasparency_bit);
 						*pixel = colorToInt(color);
 						++pixel;
 					}

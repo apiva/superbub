@@ -33,8 +33,8 @@ public:
 		importPath = path;
 	}
 
-	static Tim load(const std::filesystem::path& path);
-	static Tim loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts);
+	static Tim load(const std::filesystem::path& path, const bool special_trasparency_bit);
+	static Tim loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts, const bool special_trasparency_bit);
 
 	Tim();
 	~Tim();

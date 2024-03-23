@@ -2723,7 +2723,7 @@ void init_tims(void) {
 	ClutMorph{128, 0, 0, 128, 0, 0, 128, 0, 0},
 	ClutMorph{128, 0, 0, 64, 0, 0, 96, 0, 0},
 	ClutMorph{ 64, 0, 0, 128, 0, 0, 96, 0, 0},
-	ClutMorph{ 128, 0, 0, 96, 0, 0, 64, 0, 0}, });
+	ClutMorph{ 128, 0, 0, 96, 0, 0, 64, 0, 0}, }, false);
 	init_sprite(&font_tim, &font_spt);
 	font_spt.attribute |= 0x40000000;
 	font_spt.w = 8;
@@ -2742,7 +2742,7 @@ void init_tims(void) {
 		ClutMorph{ 128, 0, 0, 0, 0, 0, 128, 0, 0 },
 		ClutMorph{ 128, 0, 0, 0, 0, 0, 64, 0, 0 },
 		ClutMorph{ 128, 0, 0, 128, 0, 0, 128, 0, 0 },
-		});
+		}, false);
 	init_sprite(&bigfont_tim, &bigfont_spt);
 	bigfont_spt.attribute |= 0x40000000;
 	bigfont_spt.w = 16;
@@ -2751,13 +2751,13 @@ void init_tims(void) {
 	title_tim = Tim::loadWithMorphedCluts("TITLE02.TIM", {
 	ClutMorph{ 128, 0, 0, 112, 0, 0, 96, 0, 0},
 	ClutMorph{ 96, 0, 0, 112, 0, 0, 128, 0, 0},
-	ClutMorph{ 112, 0, 0, 96, 0, 0, 128, 0, 0}, });
+	ClutMorph{ 112, 0, 0, 96, 0, 0, 128, 0, 0}, }, false);
 	init_sprite(&title_tim, &title_spt);
 	title_spt.attribute |= 0x40000000;
 	title_spt.w = 42;
 	title_spt.h = 1;
 
-	screen_tim[0] = Tim::load("SCREEN2A.TIM");
+	screen_tim[0] = Tim::load("SCREEN2A.TIM", false);
 	for (i = 0; i < 3; i++)
 		init_sprite(&screen_tim[0], &screen_spt[i]);
 	screen_spt[0].x = 0;
@@ -2769,7 +2769,7 @@ void init_tims(void) {
 	screen_spt[2].x = 352;
 	screen_spt[2].w = 32;
 	screen_spt[2].u = 96;
-	screen_tim[1] = Tim::load("SCREEN2B.TIM");
+	screen_tim[1] = Tim::load("SCREEN2B.TIM", false);
 	for (i = 3; i < 7; i++)
 		init_sprite(&screen_tim[1], &screen_spt[i]);
 	screen_spt[5].attribute |= 0x60000000;
@@ -2785,14 +2785,14 @@ void init_tims(void) {
 	screen_spt[5].v = 32;
 	screen_spt[6].v = 96;
 
-	bg_tim = Tim::load("BG04.TIM");
+	bg_tim = Tim::load("BG04.TIM", false);
 	init_sprite(&bg_tim, &bg_spt);
 
 	const std::string choice_pic = FLAGS_psm_characters ? "CHOICE01.TIM" : "IMONST02.TIM";
 	monsticon_tim = Tim::loadWithMorphedCluts(choice_pic, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 	init_sprite(&monsticon_tim, &monsticon_spt);
 	monsticon_spt.w = 128;
 	monsticon_spt.h = 128;
@@ -2811,22 +2811,22 @@ void init_tims(void) {
 	monster_tim[0] = Tim::loadWithMorphedCluts(monster_pic0, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
 	monster_tim[1] = Tim::loadWithMorphedCluts(monster_pic1, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
 	monster_tim[2] = Tim::loadWithMorphedCluts(monster_pic2, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
 	monster_tim[3] = Tim::loadWithMorphedCluts(monster_pic3, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
 	for (i = 0; i < 4; i++) {
 		init_sprite(&monster_tim[i], &monster_spt[i]);
@@ -2839,7 +2839,7 @@ void init_tims(void) {
 		ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0 }, // blue
 		ClutMorph{ 0, 128, 0, 112, 16, 0, 0, 128, 0 }, // green
 		ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0 },
-		}); // magenta
+		}, false); // magenta
 
 	bubble_tim[1] = Tim::loadWithMorphedCluts("FLAME04.TIM", {
 	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
@@ -2847,9 +2847,9 @@ void init_tims(void) {
 		ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0 }, // blue
 		ClutMorph{ 0, 128, 0, 112, 16, 0, 0, 128, 0 }, // green
 		ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0 },
-		}); // magenta
+		}, false); // magenta
 
-	bubble_tim[2] = Tim::load("MAGIC01.TIM");
+	bubble_tim[2] = Tim::load("MAGIC01.TIM", true);
 	for (i = 0; i < 2; i++) {
 		init_sprite(&bubble_tim[i], &bubble_spt[i]);
 		bubble_spt[i].attribute |= 0x40000000;
@@ -2864,21 +2864,21 @@ void init_tims(void) {
 	ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0}, // yellow
 	ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0}, // blue
 	ClutMorph{ 0, 128, 0, 112, 16, 0, 0, 128, 0}, // green
-	ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0}, }); // magenta
+	ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0}, }, true); // magenta
 	init_sprite(&eater_tim, &eater_spt);
 	eater_spt.attribute |= 0x50000000;
 	eater_spt.w = 32;
 
-	timebar_tim = Tim::load("TBAR03.TIM");
+	timebar_tim = Tim::load("TBAR03.TIM", true);
 	init_sprite(&timebar_tim, &timebar_spt);
 	timebar_spt.y = 235;
 	timebar_spt.h = 4;
 
-	wincup_tim = Tim::load("CUP01.TIM");
+	wincup_tim = Tim::load("CUP01.TIM", false);
 	init_sprite(&wincup_tim, &wincup_spt);
 	wincup_spt.attribute |= 0x40000000;
 
-	bubblefx_tim = Tim::load("SMLBUB02.TIM");
+	bubblefx_tim = Tim::load("SMLBUB02.TIM", true);
 	init_sprite(&bubblefx_tim, &bubblefx_spt);
 	bubblefx_spt.attribute |= 0x50000000;
 }
