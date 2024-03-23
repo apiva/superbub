@@ -106,13 +106,21 @@ Tim::~Tim() {
 	memset(&texture, 0, sizeof(Texture));
 }
 
-Tim::Tim(Tim&& other) : image(other.image), texture(other.texture), palettedBounds(std::move(other.palettedBounds)) {
+Tim::Tim(Tim&& other) : logicalWidth(other.logicalWidth), logicalHeight(other.logicalHeight), image(other.image), texture(other.texture), palettedBounds(std::move(other.palettedBounds)) {
+	other.logicalWidth = 0;
+	other.logicalHeight = 0;
 	memset(&other.image, 0, sizeof(Image));
 	memset(&other.texture, 0, sizeof(Texture));
 }
 
 Tim& Tim::operator=(Tim&& other) {
 	if (this != &other) {
+		logicalWidth = other.logicalWidth;
+		other.logicalWidth = 0;
+
+		logicalHeight = other.logicalHeight;
+		other.logicalHeight = 0;
+
 		image = other.image;
 		memset(&other.image, 0, sizeof(Image));
 
@@ -187,15 +195,14 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 		}
 
 		const std::string color_mode_caption = (color_mode == ColorMode::Indices4bits ? "4-bits" : "8-bits");
-		const int image_width = timfile.imageHeader.width * (color_mode == ColorMode::Indices4bits ? 4 : 2);
-		const int image_height = timfile.imageHeader.height;
-
-		logger->info("Color mode {}, image width = {}, image height = {}, palettes = {}", color_mode_caption, image_width, image_height, all_cluts.size());
+		tim.logicalWidth = timfile.imageHeader.width * (color_mode == ColorMode::Indices4bits ? 4 : 2);
+		tim.logicalHeight = timfile.imageHeader.height;
+		logger->info("Color mode {}, image width = {}, image height = {}, palettes = {}", color_mode_caption, tim.logicalWidth, tim.logicalHeight, all_cluts.size());
 
 		tim.image.mipmaps = 1;
 		tim.image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-		tim.image.width = image_width;
-		tim.image.height = image_height * all_cluts.size();
+		tim.image.width = tim.logicalWidth;
+		tim.image.height = tim.logicalHeight * all_cluts.size();
 		tim.image.data = RL_MALLOC(sizeof(uint32_t) * tim.image.width * tim.image.height);
 
 		for (int clut_index = 0; clut_index < all_cluts.size(); ++clut_index) {
@@ -204,8 +211,8 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 			Image image;
 			image.mipmaps = 1;
 			image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-			image.width = image_width;
-			image.height = image_height;
+			image.width = tim.logicalWidth;
+			image.height = tim.logicalHeight;
 			image.data = RL_MALLOC(sizeof(uint32_t) * image.width * image.height);
 
 			if (color_mode == ColorMode::Indices4bits) {

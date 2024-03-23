@@ -13,6 +13,7 @@
 #include <raylib.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <tim.hpp>
 
 // Logs //
 
@@ -22,16 +23,6 @@ static std::shared_ptr<spdlog::logger> gameLog;
 
 // Types //
 
-typedef struct {
-	unsigned short pmode;
-	unsigned short x, y;
-	unsigned short w, h;
-	unsigned short tpage;
-	unsigned char u, v;
-	unsigned short cx, cy;
-	unsigned short cw, ch;
-	unsigned short cba;
-} TIM;
 
 
 typedef struct {
@@ -207,11 +198,9 @@ void initialize(void);
 void init_memory(void);
 void init_tims(void);
 void init_sound(void);
-void init_sprite(TIM*, GsSPRITE*);
+void init_sprite(const Tim*, GsSPRITE*);
 void init_screen(void);
-void load_tim(char*, TIM*);
 short load_vab(void*, char*, char*);
-void add_morphed_clut(TIM*, short, short, short, short, short, short, short, short, short);
 void wait_swap(void);
 
 
@@ -387,7 +376,7 @@ struct {
 
 // Font Stuff //
 
-TIM font_tim, bigfont_tim;
+Tim font_tim, bigfont_tim;
 GsSPRITE font_spt, bigfont_spt;
 
 #define ATMODE_NULL 0
@@ -401,7 +390,7 @@ ANI_TEXT ani_text[3];
 
 // Title Stuff //
 
-TIM title_tim;
+Tim title_tim;
 GsSPRITE title_spt;
 
 char* title_name[3] = { "CONTEST","RATING","CHAMPION" };
@@ -437,17 +426,17 @@ RANKING rank_tab[11] = {
 
 // Game Screen Stuff //
 
-TIM screen_tim[2];
+Tim screen_tim[2];
 GsSPRITE screen_spt[7];
 
-TIM bg_tim;
+Tim bg_tim;
 GsSPRITE bg_spt;
 unsigned short bg_bright;
 
-TIM timebar_tim;
+Tim timebar_tim;
 GsSPRITE timebar_spt;
 
-TIM wincup_tim;
+Tim wincup_tim;
 GsSPRITE wincup_spt;
 
 
@@ -528,10 +517,10 @@ LEVEL level_tab[MAX_LEVEL] = {
 
 // Monster Stuff //
 
-TIM monsticon_tim;
+Tim monsticon_tim;
 GsSPRITE monsticon_spt;
 
-TIM monster_tim[4];
+Tim monster_tim[4];
 GsSPRITE monster_spt[4];
 
 char* monster_name[4] = { "BOBO","GRIZZ","CHUMP","JASPER" };
@@ -539,9 +528,9 @@ char* monster_name[4] = { "BOBO","GRIZZ","CHUMP","JASPER" };
 
 // Bubble Stuff //
 
-TIM bubble_tim[3];
+Tim bubble_tim[3];
 GsSPRITE bubble_spt[3];
-TIM eater_tim;
+Tim eater_tim;
 GsSPRITE eater_spt;
 
 #define BLANK_ID 0
@@ -600,7 +589,7 @@ struct {
 
 unsigned short next_magicfx = 0;
 
-TIM bubblefx_tim;
+Tim bubblefx_tim;
 GsSPRITE bubblefx_spt;
 
 #define MAX_BUBBLEFX 256
@@ -707,10 +696,10 @@ void mode_intro(void) {
 			monster_spt[0].x = SCREEN_W2 - ox - 32;
 			monster_spt[0].y = oy + 52 - 4;
 			monster_spt[0].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
-			monster_spt[0].cy = monster_tim[0].cy + 1;
+			monster_spt[0].palette = 1;
 			GsSortFastSprite(&monster_spt[0], &main_ot[active], 0);
 			monster_spt[0].x = SCREEN_W2 + ox;
-			monster_spt[0].cy++;
+			monster_spt[0].palette++;
 			GsSortFastSprite(&monster_spt[0], &main_ot[active], 0);
 			if (game.timer1 > 150) {
 				display_text2(SCREEN_W2, oy + 84, monster_name[1], 12);
@@ -718,10 +707,10 @@ void mode_intro(void) {
 				monster_spt[1].x = SCREEN_W2 - ox - 32;
 				monster_spt[1].y = oy + 84 - 4;
 				monster_spt[1].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
-				monster_spt[1].cy = monster_tim[1].cy + 1;
+				monster_spt[1].palette = 1;
 				GsSortFastSprite(&monster_spt[1], &main_ot[active], 0);
 				monster_spt[1].x = SCREEN_W2 + ox;
-				monster_spt[1].cy++;
+				monster_spt[1].palette++;
 				GsSortFastSprite(&monster_spt[1], &main_ot[active], 0);
 				if (game.timer1 > 200) {
 					display_text2(SCREEN_W2, oy + 116, monster_name[2], 12);
@@ -729,10 +718,10 @@ void mode_intro(void) {
 					monster_spt[2].x = SCREEN_W2 - ox - 32;
 					monster_spt[2].y = oy + 116 - 4;
 					monster_spt[2].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
-					monster_spt[2].cy = monster_tim[2].cy + 1;
+					monster_spt[2].palette = 1;
 					GsSortFastSprite(&monster_spt[2], &main_ot[active], 0);
 					monster_spt[2].x = SCREEN_W2 + ox;
-					monster_spt[2].cy++;
+					monster_spt[2].palette++;
 					GsSortFastSprite(&monster_spt[2], &main_ot[active], 0);
 					display_text(SCREEN_W2, oy + 148, "AND", 4);
 					if (game.timer1 > 250) {
@@ -741,10 +730,10 @@ void mode_intro(void) {
 						monster_spt[3].x = SCREEN_W2 - ox - 32;
 						monster_spt[3].y = oy + 172 - 4;
 						monster_spt[3].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
-						monster_spt[3].cy = monster_tim[3].cy + 1;
+						monster_spt[3].palette = 1;
 						GsSortFastSprite(&monster_spt[3], &main_ot[active], 0);
 						monster_spt[3].x = SCREEN_W2 + ox;
-						monster_spt[3].cy++;
+						monster_spt[3].palette++;
 						GsSortFastSprite(&monster_spt[3], &main_ot[active], 0);
 						if (game.timer1 > 300) {
 							display_text(SCREEN_W2, oy + 204, "IN THE", 4);
@@ -871,9 +860,9 @@ void draw_title(short x, short y, unsigned short type) {
 
 	title_spt.x = x - 21 - 44;
 	title_spt.y = y + (qsin(((frame << 7) + 2048 + 32) & 4095) >> 9) + 25;
-	title_spt.u = title_tim.u;
-	title_spt.v = title_tim.v;
-	title_spt.cy = title_tim.cy + 1;
+	title_spt.u = 0;
+	title_spt.v = 0;
+	title_spt.palette = 1;
 	for (i = 0; i < 46; i++) {
 		c = ((frame + i) & 31) << 3;
 		if (c >= 128)
@@ -886,9 +875,9 @@ void draw_title(short x, short y, unsigned short type) {
 
 	title_spt.x = x - 21;
 	title_spt.y = y + (qsin(((frame << 7) + 1024 + 32) & 4095) >> 9) + 25;
-	title_spt.u = title_tim.u + 42;
-	title_spt.v = title_tim.v;
-	title_spt.cy = title_tim.cy + 2;
+	title_spt.u = 42;
+	title_spt.v = 0;
+	title_spt.palette = 2;
 	for (i = 0; i < 46; i++) {
 		c = ((frame - i) & 31) << 3;
 		if (c >= 128)
@@ -901,9 +890,9 @@ void draw_title(short x, short y, unsigned short type) {
 
 	title_spt.x = x - 21 + 44;
 	title_spt.y = y + (qsin(((frame << 7) + 32) & 4095) >> 9) + 25;
-	title_spt.u = title_tim.u;
-	title_spt.v = title_tim.v;
-	title_spt.cy = title_tim.cy + 3;
+	title_spt.u = 0;
+	title_spt.v = 0;
+	title_spt.palette = 3;
 	for (i = 0; i < 46; i++) {
 		c = ((frame + i) & 31) << 3;
 		if (c >= 128)
@@ -920,7 +909,7 @@ void draw_title(short x, short y, unsigned short type) {
 		monster_spt[i].x = x + (qcos(((frame << 6) + (i << 10)) & 4095) >> 6) - 18;
 		monster_spt[i].y = y + (qsin(((frame << 6) + (i << 10)) & 4095) >> 6) + 34;
 		monster_spt[i].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
-		monster_spt[i].cy = monster_tim[i].cy + 1;
+		monster_spt[i].palette = 1;
 		GsSortFastSprite(&monster_spt[i], &main_ot[active], 0);
 	}
 }
@@ -1199,7 +1188,7 @@ void display_monsticon(short x, short y, unsigned short type, unsigned short col
 	monsticon_spt.y = y;
 	monsticon_spt.u = (type & 1) << 7;
 	monsticon_spt.v = (type & 2) << 6;
-	monsticon_spt.cy = monsticon_tim.cy + color;
+	monsticon_spt.palette = color;
 	monsticon_spt.r = monsticon_spt.g = monsticon_spt.b = bright;
 	GsSortFastSprite(&monsticon_spt, &main_ot[active], 0);
 }
@@ -1210,8 +1199,8 @@ void mode_play(void) {
 
 	music.next = (MAP_H << 1) - ((player[0].empty + player[1].empty) / MAP_W) + 1;
 
-	bubble_spt[1].u = bubble_tim[1].u + ((frame >> 2 & 3) << 4);
-	eater_spt.u = eater_tim.u + ((frame >> 1 & 3) << 5);
+	bubble_spt[1].u = ((frame >> 2 & 3) << 4);
+	eater_spt.u = ((frame >> 1 & 3) << 5);
 
 	for (p = 0; p < 2; p++) {
 		update_player(p);
@@ -1260,7 +1249,7 @@ void update_player(unsigned short p) {
 	monster_spt[pp->monster.type].x = (pp->aim.x << 4) + pp->aim.ox + sx - 24;
 	monster_spt[pp->monster.type].y = ((MAP_H2 + 1) << 4) + (pp->monster.oy) + 16;
 	monster_spt[pp->monster.type].u = anim_tab[pp->monster.anim][(frame >> 1) & 15] << 5;
-	monster_spt[pp->monster.type].cy = monster_tim[pp->monster.type].cy + p + 1;
+	monster_spt[pp->monster.type].palette = p + 1;
 	GsSortFastSprite(&monster_spt[pp->monster.type], &main_ot[active], 0);
 	pp->aim.ox /= 2;
 }
@@ -1862,7 +1851,7 @@ void plmode_eat1(unsigned short p) {
 		if (ep->mode) {
 			eater_spt.x = (x << 4) + sx - 8;
 			eater_spt.y = (y << 4) + 16 - 8;
-			eater_spt.cy = eater_tim.cy + color;
+			eater_spt.palette = color;
 			eater_spt.r = eater_spt.g = eater_spt.b = ep->bright << 3;
 			GsSortFastSprite(&eater_spt, &main_ot[active], 0);
 			eat_flag = 1;
@@ -1899,7 +1888,7 @@ void plmode_eat2(unsigned short p) {
 			y = (ep->y << 4) + ((ep->vy * pp->timer) << 1) + 16;
 			eater_spt.x = x - 8;
 			eater_spt.y = y - 8;
-			eater_spt.cy = eater_tim.cy + ep->color;
+			eater_spt.palette = ep->color;
 			eater_spt.r = eater_spt.g = eater_spt.b = ep->bright << 3;
 			GsSortFastSprite(&eater_spt, &main_ot[active], 0);
 			if (ep->mode == EMODE_EAT)		// silly, but works
@@ -2127,11 +2116,11 @@ void draw_bubble(short x, short y, unsigned short id) {
 	if (id) {
 		type = id_tab[id].type;
 		if (type == BUBBLE_TYPE)
-			bubble_spt[0].u = bubble_tim[0].u + ((((frame >> 3) + (x >> 4) + (y >> 4)) & 3) << 4);
+			bubble_spt[0].u = ((((frame >> 3) + (x >> 4) + (y >> 4)) & 3) << 4);
 		color = id_tab[id].color;
 		bubble_spt[type].x = x;
 		bubble_spt[type].y = y;
-		bubble_spt[type].cy = bubble_tim[type].cy + color;
+		bubble_spt[type].palette = color;
 		bubble_spt[type].r = bubble_spt[type].g = bubble_spt[type].b = 128;
 		GsSortFastSprite(&bubble_spt[type], &main_ot[active], 0);
 	}
@@ -2455,7 +2444,7 @@ void update_anitext(void) {
 	for (a = 0; a < 3; a++) {
 		ap = &ani_text[a];
 		if (ap->color >= 0)
-			bigfont_spt.cy = bigfont_tim.cy + ap->color;
+			bigfont_spt.palette = ap->color;
 		switch (ap->mode) {
 		case ATMODE_UP:
 			ap->mode = ATMODE_HOLD;
@@ -2502,7 +2491,7 @@ void update_anitext(void) {
 				bigfont_spt.u = ap->chr[i].u;
 				bigfont_spt.v = ap->chr[i].v;
 				if (ap->color < 0)
-					bigfont_spt.cy = bigfont_tim.cy + (((frame >> 1) + i) % 12);
+					bigfont_spt.palette = (((frame >> 1) + i) % 12);
 				GsSortFastSprite(&bigfont_spt, &main_ot[active], 0);
 			}
 		}
@@ -2515,7 +2504,7 @@ void display_text(short ox, short oy, char* txt, unsigned short color) {
 
 	font_spt.x = ox - (strlen(txt) << 2);
 	font_spt.y = oy;
-	font_spt.cy = font_tim.cy + color;
+	font_spt.palette = color;
 	while (*txt != '\0' && font_spt.x < SCREEN_W) {
 		c = (*txt++) - ' ';
 		if (c >= 1) {
@@ -2535,13 +2524,13 @@ void display_text2(short ox, short oy, char* txt, short color) {
 	bigfont_spt.x = ox - (strlen(txt) << 3);
 	bigfont_spt.y = oy;
 	if (color >= 0)
-		bigfont_spt.cy = bigfont_tim.cy + color;
+		bigfont_spt.palette = color;
 	else
 		cy = (frame >> 1) + (oy / 24);
 	while (*txt != '\0' && bigfont_spt.x < SCREEN_W) {
 		if (color < 0) {
 			cy %= 12;
-			bigfont_spt.cy = bigfont_tim.cy + cy++;
+			bigfont_spt.palette = cy++;
 		}
 		c = (*txt++) - ' ';
 		if (c >= 1) {
@@ -2741,44 +2730,45 @@ void init_memory(void) {
 void init_tims(void) {
 	unsigned short i;
 
-	load_tim("FONT01.TIM", &font_tim);
-	add_morphed_clut(&font_tim, 128, 0, 0, 128, 0, 0, 128, 0, 0);
-	add_morphed_clut(&font_tim, 128, 0, 0, 64, 0, 0, 96, 0, 0);
-	add_morphed_clut(&font_tim, 64, 0, 0, 128, 0, 0, 96, 0, 0);
-	add_morphed_clut(&font_tim, 128, 0, 0, 96, 0, 0, 64, 0, 0);
+	font_tim = Tim::loadWithMorphedCluts("FONT01.TIM", {
+	ClutMorph{128, 0, 0, 128, 0, 0, 128, 0, 0},
+	ClutMorph{128, 0, 0, 64, 0, 0, 96, 0, 0},
+	ClutMorph{ 64, 0, 0, 128, 0, 0, 96, 0, 0},
+	ClutMorph{ 128, 0, 0, 96, 0, 0, 64, 0, 0}, });
 	init_sprite(&font_tim, &font_spt);
 	font_spt.attribute |= 0x40000000;
 	font_spt.w = 8;
 	font_spt.h = 16;
 
-	load_tim("FONT02.TIM", &bigfont_tim);
-	add_morphed_clut(&bigfont_tim, 128, 0, 0, 64, 0, 0, 0, 0, 0);
-	add_morphed_clut(&bigfont_tim, 128, 0, 0, 128, 0, 0, 0, 0, 0);
-	add_morphed_clut(&bigfont_tim, 64, 0, 0, 128, 0, 0, 0, 0, 0);
-	add_morphed_clut(&bigfont_tim, 0, 0, 0, 128, 0, 0, 0, 0, 0);
-	add_morphed_clut(&bigfont_tim, 0, 0, 0, 128, 0, 0, 64, 0, 0);
-	add_morphed_clut(&bigfont_tim, 0, 0, 0, 128, 0, 0, 128, 0, 0);
-	add_morphed_clut(&bigfont_tim, 0, 0, 0, 64, 0, 0, 128, 0, 0);
-	add_morphed_clut(&bigfont_tim, 0, 0, 0, 0, 0, 0, 128, 0, 0);
-	add_morphed_clut(&bigfont_tim, 64, 0, 0, 0, 0, 0, 128, 0, 0);
-	add_morphed_clut(&bigfont_tim, 128, 0, 0, 0, 0, 0, 128, 0, 0);
-	add_morphed_clut(&bigfont_tim, 128, 0, 0, 0, 0, 0, 64, 0, 0);
-	add_morphed_clut(&bigfont_tim, 128, 0, 0, 128, 0, 0, 128, 0, 0);	// white (12)
+	bigfont_tim = Tim::loadWithMorphedCluts("FONT02.TIM", {
+	ClutMorph{ 128, 0, 0, 64, 0, 0, 0, 0, 0 },
+		ClutMorph{ 128, 0, 0, 128, 0, 0, 0, 0, 0 },
+		ClutMorph{ 64, 0, 0, 128, 0, 0, 0, 0, 0 },
+		ClutMorph{ 0, 0, 0, 128, 0, 0, 0, 0, 0 },
+		ClutMorph{ 0, 0, 0, 128, 0, 0, 64, 0, 0 },
+		ClutMorph{ 0, 0, 0, 128, 0, 0, 128, 0, 0 },
+		ClutMorph{ 0, 0, 0, 64, 0, 0, 128, 0, 0 },
+		ClutMorph{ 0, 0, 0, 0, 0, 0, 128, 0, 0 },
+		ClutMorph{ 64, 0, 0, 0, 0, 0, 128, 0, 0 },
+		ClutMorph{ 128, 0, 0, 0, 0, 0, 128, 0, 0 },
+		ClutMorph{ 128, 0, 0, 0, 0, 0, 64, 0, 0 },
+		ClutMorph{ 128, 0, 0, 128, 0, 0, 128, 0, 0 },
+		});
 	init_sprite(&bigfont_tim, &bigfont_spt);
 	bigfont_spt.attribute |= 0x40000000;
 	bigfont_spt.w = 16;
 	bigfont_spt.h = 24;
 
-	load_tim("TITLE02.TIM", &title_tim);
-	add_morphed_clut(&title_tim, 128, 0, 0, 112, 0, 0, 96, 0, 0);
-	add_morphed_clut(&title_tim, 96, 0, 0, 112, 0, 0, 128, 0, 0);
-	add_morphed_clut(&title_tim, 112, 0, 0, 96, 0, 0, 128, 0, 0);
+	title_tim = Tim::loadWithMorphedCluts("TITLE02.TIM", {
+	ClutMorph{ 128, 0, 0, 112, 0, 0, 96, 0, 0},
+	ClutMorph{ 96, 0, 0, 112, 0, 0, 128, 0, 0},
+	ClutMorph{ 112, 0, 0, 96, 0, 0, 128, 0, 0}, });
 	init_sprite(&title_tim, &title_spt);
 	title_spt.attribute |= 0x40000000;
 	title_spt.w = 42;
 	title_spt.h = 1;
 
-	load_tim("SCREEN2A.TIM", &screen_tim[0]);
+	screen_tim[0] = Tim::load("SCREEN2A.TIM");
 	for (i = 0; i < 3; i++)
 		init_sprite(&screen_tim[0], &screen_spt[i]);
 	screen_spt[0].x = 0;
@@ -2790,7 +2780,7 @@ void init_tims(void) {
 	screen_spt[2].x = 352;
 	screen_spt[2].w = 32;
 	screen_spt[2].u = 96;
-	load_tim("SCREEN2B.TIM", &screen_tim[1]);
+	screen_tim[1] = Tim::load("SCREEN2B.TIM");
 	for (i = 3; i < 7; i++)
 		init_sprite(&screen_tim[1], &screen_spt[i]);
 	screen_spt[5].attribute |= 0x60000000;
@@ -2806,38 +2796,60 @@ void init_tims(void) {
 	screen_spt[5].v = 32;
 	screen_spt[6].v = 96;
 
-	load_tim("BG04.TIM", &bg_tim);
+	bg_tim = Tim::load("BG04.TIM");
 	init_sprite(&bg_tim, &bg_spt);
 
-	load_tim("IMONST02.TIM", &monsticon_tim);
-	add_morphed_clut(&monsticon_tim, 64, 64, 0, 0, 64, 64, 64, 0, 64);
-	add_morphed_clut(&monsticon_tim, 0, 64, 64, 64, 0, 64, 64, 64, 0);
-	add_morphed_clut(&monsticon_tim, 64, 0, 64, 64, 64, 0, 0, 64, 64);
+	monsticon_tim = Tim::loadWithMorphedCluts("IMONST02.TIM", {
+	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
+	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
 	init_sprite(&monsticon_tim, &monsticon_spt);
 	monsticon_spt.w = 128;
 	monsticon_spt.h = 128;
 
-	load_tim("MONST01.TIM", &monster_tim[0]);
-	load_tim("MONST02.TIM", &monster_tim[1]);
-	load_tim("MONST03.TIM", &monster_tim[2]);
-	load_tim("MONST04.TIM", &monster_tim[3]);
+	monster_tim[0] = Tim::loadWithMorphedCluts("MONST01.TIM", {
+	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
+	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+
+	monster_tim[1] = Tim::loadWithMorphedCluts("MONST02.TIM", {
+	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
+	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+
+	monster_tim[2] = Tim::loadWithMorphedCluts("MONST03.TIM", {
+	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
+	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+
+	monster_tim[3] = Tim::loadWithMorphedCluts("MONST04.TIM", {
+	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
+	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
+	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
+
 	for (i = 0; i < 4; i++) {
-		add_morphed_clut(&monster_tim[i], 64, 64, 0, 0, 64, 64, 64, 0, 64);
-		add_morphed_clut(&monster_tim[i], 0, 64, 64, 64, 0, 64, 64, 64, 0);
-		add_morphed_clut(&monster_tim[i], 64, 0, 64, 64, 64, 0, 0, 64, 64);
 		init_sprite(&monster_tim[i], &monster_spt[i]);
 		monster_spt[i].w = 32;
 	}
 
-	load_tim("BUBBLE08.TIM", &bubble_tim[0]);
-	load_tim("FLAME04.TIM", &bubble_tim[1]);
-	load_tim("MAGIC01.TIM", &bubble_tim[2]);
+	bubble_tim[0] = Tim::loadWithMorphedCluts("BUBBLE08.TIM", {
+	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
+		ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0 }, // yellow
+		ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0 }, // blue
+		ClutMorph{ 0, 128, 0, 112, 16, 0, 0, 128, 0 }, // green
+		ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0 },
+		}); // magenta
+
+	bubble_tim[1] = Tim::loadWithMorphedCluts("FLAME04.TIM", {
+	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
+		ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0 }, // yellow
+		ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0 }, // blue
+		ClutMorph{ 0, 128, 0, 112, 16, 0, 0, 128, 0 }, // green
+		ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0 },
+		}); // magenta
+
+	bubble_tim[2] = Tim::load("MAGIC01.TIM");
 	for (i = 0; i < 2; i++) {
-		add_morphed_clut(&bubble_tim[i], 120, 8, 0, 0, 128, 0, 0, 128, 0); // red
-		add_morphed_clut(&bubble_tim[i], 112, 16, 0, 96, 32, 0, 0, 128, 0); // yellow
-		add_morphed_clut(&bubble_tim[i], 0, 128, 0, 64, 64, 0, 128, 0, 0); // blue
-		add_morphed_clut(&bubble_tim[i], 0, 128, 0, 112, 16, 0, 0, 128, 0); // green
-		add_morphed_clut(&bubble_tim[i], 112, 16, 0, 0, 128, 0, 128, 0, 0); // magenta
 		init_sprite(&bubble_tim[i], &bubble_spt[i]);
 		bubble_spt[i].attribute |= 0x40000000;
 		bubble_spt[i].w = 16;
@@ -2846,30 +2858,29 @@ void init_tims(void) {
 	bubble_spt[2].attribute |= 0x50000000;
 	bubble_spt[2].w = 16;
 
-	load_tim("BFLAME02.TIM", &eater_tim);
-	add_morphed_clut(&eater_tim, 120, 8, 0, 0, 128, 0, 0, 128, 0); // red
-	add_morphed_clut(&eater_tim, 112, 16, 0, 96, 32, 0, 0, 128, 0); // yellow
-	add_morphed_clut(&eater_tim, 0, 128, 0, 64, 64, 0, 128, 0, 0); // blue
-	add_morphed_clut(&eater_tim, 0, 128, 0, 112, 16, 0, 0, 128, 0); // green
-	add_morphed_clut(&eater_tim, 112, 16, 0, 0, 128, 0, 128, 0, 0); // magenta
+	eater_tim = Tim::loadWithMorphedCluts("BFLAME02.TIM", {
+	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
+	ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0}, // yellow
+	ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0}, // blue
+	ClutMorph{ 0, 128, 0, 112, 16, 0, 0, 128, 0}, // green
+	ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0}, }); // magenta
 	init_sprite(&eater_tim, &eater_spt);
 	eater_spt.attribute |= 0x50000000;
 	eater_spt.w = 32;
 
-	load_tim("TBAR03.TIM", &timebar_tim);
+	timebar_tim = Tim::load("TBAR03.TIM");
 	init_sprite(&timebar_tim, &timebar_spt);
 	timebar_spt.y = 235;
 	timebar_spt.h = 4;
 
-	load_tim("CUP01.TIM", &wincup_tim);
+	wincup_tim = Tim::load("CUP01.TIM");
 	init_sprite(&wincup_tim, &wincup_spt);
 	wincup_spt.attribute |= 0x40000000;
 
-	load_tim("SMLBUB02.TIM", &bubblefx_tim);
+	bubblefx_tim = Tim::load("SMLBUB02.TIM");
 	init_sprite(&bubblefx_tim, &bubblefx_spt);
 	bubblefx_spt.attribute |= 0x50000000;
 }
-
 
 void init_sound(void) {
 	unsigned short i;
@@ -2884,19 +2895,17 @@ void init_sound(void) {
 }
 
 
-void init_sprite(TIM* tim, GsSPRITE* spt) {
-	spt->attribute = tim->pmode << 24;
+void init_sprite(const Tim* tim, GsSPRITE* spt) {
+	spt->attribute = 0;
 	spt->x = spt->y = 0;
-	spt->w = tim->w;
-	spt->h = tim->h;
-	spt->tpage = tim->tpage;
-	spt->u = tim->u;
-	spt->v = tim->v;
-	spt->cx = tim->cx;
-	spt->cy = tim->cy;
+	spt->w = tim->logicalWidth;
+	spt->h = tim->logicalHeight;
+	spt->u = 0;
+	spt->v = 0;
+	spt->palette = 0;
 	spt->r = spt->g = spt->b = 128;
-	spt->mx = tim->w >> 1;
-	spt->my = tim->h >> 1;
+	spt->mx = tim->logicalWidth >> 1;
+	spt->my = tim->logicalHeight >> 1;
 	spt->scalex = spt->scaley = 1;
 	spt->rotate = 0;
 }
@@ -2933,70 +2942,6 @@ void init_screen(void) {
 }
 
 
-void load_tim(char* tim_file, TIM* tim) {
-	RECT rect;
-
-	gameLog->info("LOAD: {}", tim_file);
-	gameLog->info("ADDR: {}", load_addr);
-	wait_swap();
-
-	if (MWbload(tim_file, (void*)load_addr) > 0) {
-
-		GsGetTimInfo((unsigned long*)(uintptr_t(load_addr) + 4), &load_img);
-
-		tim->pmode = load_img.pmode & 3;
-		tim->x = load_img.px;
-		tim->y = load_img.py;
-		tim->h = load_img.ph;
-		tim->tpage = GetTPage(tim->pmode, 0, load_img.px, load_img.py);
-		tim->v = load_img.py & 255;
-		tim->cx = load_img.cx;
-		tim->cy = load_img.cy;
-		tim->cw = load_img.cw;
-		tim->ch = 1;
-		tim->cba = GetClut(load_img.cx, load_img.cy);
-		switch (tim->pmode) {
-		case 0:
-			//				printf("TIM: 4bit\n");
-			tim->w = load_img.pw << 2;
-			tim->u = (load_img.px & 63) << 2;
-			break;
-		case 1:
-			//				printf("TIM: 8bit\n");
-			tim->w = load_img.pw << 1;
-			tim->u = (load_img.px & 63) << 1;
-			break;
-		case 2:
-			//				printf("TIM: 16bit\n");
-			tim->w = load_img.pw;
-			tim->u = (load_img.px & 63);
-			break;
-		default:
-			printf("TIM: 24bit - not supported\n");
-		}
-
-		rect.x = load_img.px;
-		rect.y = load_img.py;
-		rect.w = load_img.pw;
-		rect.h = load_img.ph;
-		//		printf("LoadImage (Pixel)...\n");	
-		LoadImage(&rect, load_img.pixel);
-
-		if ((tim->pmode) < 2) {
-			rect.x = load_img.cx;
-			rect.y = load_img.cy;
-			rect.w = load_img.cw;
-			rect.h = 1;
-			//			printf("LoadImage (CLUT)...\n");
-			LoadImage(&rect, load_img.clut);
-		}
-	}
-	else {
-		printf("Failed to load: %s\n", tim_file);
-	}
-}
-
-
 short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	short id = -1;
 
@@ -3020,53 +2965,6 @@ short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	}
 	return(id);
 }
-
-
-void add_morphed_clut(TIM* tim,
-	short rr, short rg, short rb,
-	short gr, short gg, short gb,
-	short br, short bg, short bb) {
-	unsigned short clut[256];
-	RECT rect;
-	unsigned short c;
-	unsigned short t, sr, sg, sb;
-	short r, g, b;
-
-	// Read CLUT
-	rect.x = tim->cx;
-	rect.y = tim->cy;
-	rect.w = tim->cw;
-	rect.h = 1;
-	StoreImage(&rect, (unsigned long*)&clut);
-	DrawSync(0);
-
-	// Morph CLUT
-	for (c = 0; c < tim->cw; c++) {
-		t = clut[c] & 0x8000;
-		sr = clut[c] & 31;
-		sg = (clut[c] >> 5) & 31;
-		sb = (clut[c] >> 10) & 31;
-
-		r = ((sr * rr) + (sg * rg) + (sb * rb)) / 128;
-		g = ((sr * gr) + (sg * gg) + (sb * gb)) / 128;
-		b = ((sr * br) + (sg * bg) + (sb * bb)) / 128;
-
-		if (r < 0) r = 0;
-		if (r > 31) r = 31;
-		if (g < 0) g = 0;
-		if (g > 31) g = 31;
-		if (b < 0) b = 0;
-		if (b > 31) b = 31;
-
-		clut[c] = t | r | (g << 5) | (b << 10);
-	}
-
-	// Write CLUT
-	rect.y = tim->cy + tim->ch++;
-	LoadImage(&rect, (unsigned long*)&clut);
-	DrawSync(0);
-}
-
 
 void wait_swap(void) {
 	if (debug_flag) {

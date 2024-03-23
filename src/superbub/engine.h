@@ -7,7 +7,7 @@ struct GsSPRITE {
 	unsigned short w, h;
 	unsigned short tpage;
 	unsigned char u, v;
-	short cx, cy;
+	short palette;
 	unsigned char r, g, b;
 	short mx, my;
 	short scalex, scaley;

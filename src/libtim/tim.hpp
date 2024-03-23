@@ -34,6 +34,8 @@ public:
 	Tim& operator=(const Tim&) = delete;
 	Tim& operator=(Tim&& other);
 
+	int logicalWidth = 0;
+	int logicalHeight = 0;
 	Image image;
 	Texture texture;
 	std::vector<Rectangle> palettedBounds;
