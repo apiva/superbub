@@ -210,6 +210,7 @@ void get_pad_buffers(unsigned char** pad1, unsigned char** pad2);
 void fetch_input();
 
 DEFINE_bool(debug, false, "Enable debug");
+DEFINE_bool(psm_characters, false, "Use PSM character images");
 
 // Screen & GPU Stuff //
 
@@ -2779,7 +2780,8 @@ void init_tims(void) {
 	bg_tim = Tim::load("BG04.TIM");
 	init_sprite(&bg_tim, &bg_spt);
 
-	monsticon_tim = Tim::loadWithMorphedCluts("IMONST02.TIM", {
+	const std::string choice_pic = FLAGS_psm_characters ? "CHOICE01.TIM" : "IMONST02.TIM";
+	monsticon_tim = Tim::loadWithMorphedCluts(choice_pic, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
@@ -2787,22 +2789,33 @@ void init_tims(void) {
 	monsticon_spt.w = 128;
 	monsticon_spt.h = 128;
 
-	monster_tim[0] = Tim::loadWithMorphedCluts("MONST01.TIM", {
+	std::string monster_pic0 = "MONST01.TIM";
+	std::string monster_pic1 = "MONST02.TIM";
+	std::string monster_pic2 = "MONST03.TIM";
+	std::string monster_pic3 = "MONST04.TIM";
+	if (FLAGS_psm_characters) {
+		monster_pic0 = "PIG01.TIM";
+		monster_pic1 = "LION01.TIM";
+		monster_pic2 = "FROG01.TIM";
+		monster_pic3 = "SPOOK01.TIM";
+	}
+
+	monster_tim[0] = Tim::loadWithMorphedCluts(monster_pic0, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
 
-	monster_tim[1] = Tim::loadWithMorphedCluts("MONST02.TIM", {
+	monster_tim[1] = Tim::loadWithMorphedCluts(monster_pic1, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
 
-	monster_tim[2] = Tim::loadWithMorphedCluts("MONST03.TIM", {
+	monster_tim[2] = Tim::loadWithMorphedCluts(monster_pic2, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
 
-	monster_tim[3] = Tim::loadWithMorphedCluts("MONST04.TIM", {
+	monster_tim[3] = Tim::loadWithMorphedCluts(monster_pic3, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, });
