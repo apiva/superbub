@@ -14,14 +14,6 @@ struct GsSPRITE {
 	unsigned char r, g, b;
 };
 
-inline void GetPadBuf(volatile unsigned char** buf1, volatile unsigned char** buf2) {
-	static std::array<unsigned char, 4096> a, b;
-	a.fill(0);
-	b.fill(0);
-	*buf1 = a.data();
-	*buf2 = b.data();
-}
-
 inline int MWbload(const char* filename, void* memory) { return 0; }
 inline short SsUtKeyOff(short voice, short vabId, short prog, short tone, short note) { return -1; }
 inline short SsUtKeyOn(short vabId, short prog, short tone, short note, short fine, short voll, short volr) { return -1; }

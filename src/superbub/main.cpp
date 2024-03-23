@@ -14,6 +14,7 @@
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <tim.hpp>
+#include <map>
 
 // Logs //
 
@@ -204,6 +205,8 @@ short load_vab(void*, char*, char*);
 void draw_sprite(const GsSPRITE*);
 void flush_sprites();
 
+void get_pad_buffers(unsigned char** pad1, unsigned char** pad2);
+void fetch_input();
 
 unsigned short debug_flag = 1;
 
@@ -243,7 +246,7 @@ unsigned long frame = 0;
 #define PAD_LEFT 0x8000
 
 struct {
-	volatile unsigned char* buffer;
+	unsigned char* buffer;
 	unsigned char connected;
 	unsigned char type;
 	unsigned short keys;
@@ -604,6 +607,8 @@ int main() {
 	//	printf("Main Loop.\n");
 
 	while (!WindowShouldClose()) {
+		fetch_input();
+
 		read_pads();
 		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
 			SsUtAllKeyOff(0);
@@ -2690,7 +2695,7 @@ void initialize(void) {
 	InitWindow(SCREEN_W, SCREEN_H, "Superbub");
 	SetTargetFPS(60);
 
-	GetPadBuf(&pad[0].buffer, &pad[1].buffer);
+	get_pad_buffers(&pad[0].buffer, &pad[1].buffer);
 
 	//	printf("Redirecting CD I/O...\n");
 	//	MWRedirectIO(__MWIO_CDROM);
@@ -2939,4 +2944,51 @@ void flush_sprites() {
 	}
 
 	sprites.clear();
+}
+
+uint32_t pad_buffer_1, pad_buffer_2;
+
+void get_pad_buffers(unsigned char** pad1, unsigned char** pad2) {
+	*pad1 = reinterpret_cast<unsigned char*>(&pad_buffer_1);
+	*pad2 = reinterpret_cast<unsigned char*>(&pad_buffer_2);
+}
+
+void fetch_input() {
+	const std::map<int, uint16_t> player_1_keys{
+		{KEY_R, PAD_L2 },
+		{KEY_T, PAD_R2 },
+		{KEY_F, PAD_L1 },
+		{KEY_G, PAD_R1 },
+		{KEY_W, PAD_TRIANGLE },
+		{KEY_D, PAD_CIRCLE },
+		{KEY_S, PAD_X },
+		{KEY_A, PAD_SQUARE },
+		{KEY_SPACE, PAD_SELECT },
+		{KEY_ENTER, PAD_START },
+		{KEY_UP, PAD_UP },
+		{KEY_RIGHT, PAD_RIGHT },
+		{KEY_DOWN, PAD_DOWN },
+		{KEY_LEFT, PAD_LEFT },
+	};
+
+	constexpr uint32_t with_controller = 0x00;
+	constexpr uint32_t without_controller = 0xff;
+	constexpr uint32_t terminal_standard_pad = 0x4 << 12;
+	constexpr uint32_t data_size_2bytes = 0x2 << 8;
+
+	pad_buffer_1 = with_controller | terminal_standard_pad | data_size_2bytes;
+
+	{
+		uint16_t payload = 0;
+		for (const auto& entry : player_1_keys) {
+			if (IsKeyDown(entry.first)) {
+				payload |= entry.second;
+			}
+		}
+
+		payload = ((payload & 0x00ff) << 8) | ((payload & 0xff00) >> 8);
+		pad_buffer_1 |= uint32_t(~payload) << 16;
+	}
+
+	pad_buffer_2 = without_controller;
 }
