@@ -202,6 +202,7 @@ void init_sprite(const Tim*, GsSPRITE*);
 short load_vab(void*, char*, char*);
 
 void draw_sprite(const GsSPRITE*);
+void flush_sprites();
 
 
 unsigned short debug_flag = 1;
@@ -603,15 +604,6 @@ int main() {
 	//	printf("Main Loop.\n");
 
 	while (!WindowShouldClose()) {
-		Camera2D camera;
-		memset(&camera, 0, sizeof(Camera2D));
-		camera.zoom = 1;
-
-		BeginDrawing();
-		ClearBackground(BLACK);
-
-		BeginMode2D(camera);
-
 		read_pads();
 		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
 			SsUtAllKeyOff(0);
@@ -632,7 +624,25 @@ int main() {
 			gameLog->info("FRAME: {}", frame);
 		}
 
+		Camera2D camera;
+		memset(&camera, 0, sizeof(Camera2D));
+
+		const float actual_height = GetScreenHeight();
+		const float factor = actual_height / float(SCREEN_H);
+		const float actual_width = factor * float(SCREEN_W);
+
+		camera.offset.x = (GetScreenWidth() - actual_width) / 2;
+		camera.zoom = float(GetScreenHeight()) / float(SCREEN_H);
+
+		BeginDrawing();
+		ClearBackground(BLACK);
+
+		BeginScissorMode(camera.offset.x, 0, actual_width, actual_height);
+		BeginMode2D(camera);
+		flush_sprites();
 		EndMode2D();
+		EndScissorMode();
+
 		EndDrawing();
 
 		frame++;
@@ -2676,6 +2686,7 @@ void initialize(void) {
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
 
+	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(SCREEN_W, SCREEN_H, "Superbub");
 	SetTargetFPS(60);
 
@@ -2857,6 +2868,7 @@ void init_sound(void) {
 
 
 void init_sprite(const Tim* tim, GsSPRITE* spt) {
+	spt->tim = tim;
 	spt->attribute = 0;
 	spt->x = spt->y = 0;
 	spt->w = tim->logicalWidth;
@@ -2889,3 +2901,42 @@ short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	return(id);
 }
 
+std::vector<GsSPRITE> sprites;
+
+void draw_sprite(const GsSPRITE* sprite) {
+	sprites.emplace_back(*sprite);
+}
+
+void flush_sprites() {
+	constexpr uint32_t brigthness_flag = 1u << 6;
+
+	for (auto sprite = sprites.rbegin(); sprite != sprites.rend(); ++sprite) {
+		Rectangle source;
+		Rectangle dest;
+		Color tint = WHITE;
+
+		source.x = sprite->tim->palettedBounds.at(sprite->palette).x + sprite->u;
+		source.y = sprite->tim->palettedBounds.at(sprite->palette).y + sprite->v;
+		source.width = sprite->w;
+		source.height = sprite->h;
+
+		dest.x = sprite->x;
+		dest.y = sprite->y;
+		dest.width = sprite->w;
+		dest.height = sprite->h;
+
+		if ((sprite->attribute & brigthness_flag) == 0) {
+			const float r_fact = float(sprite->r) / 128.0f;
+			const float g_fact = float(sprite->g) / 128.0f;
+			const float b_fact = float(sprite->b) / 128.0f;
+
+			tint.r = unsigned char(std::clamp(int(r_fact * 255), 0, 255));
+			tint.g = unsigned char(std::clamp(int(g_fact * 255), 0, 255));
+			tint.b = unsigned char(std::clamp(int(b_fact * 255), 0, 255));
+		}
+
+		DrawTexturePro(sprite->tim->texture, source, dest, Vector2{ 0,0 }, 0, tint);
+	}
+
+	sprites.clear();
+}
