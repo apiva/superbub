@@ -14,22 +14,8 @@ struct GsSPRITE {
 	long rotate;
 };
 
-struct GsOT_TAG {
-	unsigned p : 24;
-	unsigned char num : 8;
-};
-
-struct GsOT {
-	unsigned short length;
-	GsOT_TAG* org;
-	unsigned short offset;
-	unsigned short point;
-	GsOT_TAG* tag;
-};
-
 int MWbload(const char* filename, void* memory);
 void GetPadBuf(volatile unsigned char** buf1, volatile unsigned char** buf2);
-void GsSortFastSprite(GsSPRITE* sp, GsOT* otp, unsigned short pri);
 
 short SsUtKeyOff(short voice, short vabId, short prog, short tone, short note);
 short SsUtKeyOn(short vabId, short prog, short tone, short note, short fine, short voll, short volr);

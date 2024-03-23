@@ -200,6 +200,8 @@ void init_sound(void);
 void init_sprite(const Tim*, GsSPRITE*);
 short load_vab(void*, char*, char*);
 
+void draw_sprite(const GsSPRITE*);
+
 
 unsigned short debug_flag = 1;
 
@@ -214,16 +216,7 @@ unsigned short debug_flag = 1;
 #define SCREEN_W4 (SCREEN_W>>2)
 #define SCREEN_H4 (SCREEN_H>>2)
 
-#define PACKETAREA_SIZE 0x8000
-
-#define OT_LENGTH 1
-
-GsOT main_ot[2];
-GsOT_TAG main_tag[2][1 << OT_LENGTH];
-
 unsigned long frame = 0;
-unsigned short active;
-
 
 // Controller Stuff //
 
@@ -680,10 +673,10 @@ void mode_intro(void) {
 			monster_spt[0].y = oy + 52 - 4;
 			monster_spt[0].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
 			monster_spt[0].palette = 1;
-			GsSortFastSprite(&monster_spt[0], &main_ot[active], 0);
+			draw_sprite(&monster_spt[0]);
 			monster_spt[0].x = SCREEN_W2 + ox;
 			monster_spt[0].palette++;
-			GsSortFastSprite(&monster_spt[0], &main_ot[active], 0);
+			draw_sprite(&monster_spt[0]);
 			if (game.timer1 > 150) {
 				display_text2(SCREEN_W2, oy + 84, monster_name[1], 12);
 				ox = (strlen(monster_name[1]) + 1) << 3;
@@ -691,10 +684,10 @@ void mode_intro(void) {
 				monster_spt[1].y = oy + 84 - 4;
 				monster_spt[1].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
 				monster_spt[1].palette = 1;
-				GsSortFastSprite(&monster_spt[1], &main_ot[active], 0);
+				draw_sprite(&monster_spt[1]);
 				monster_spt[1].x = SCREEN_W2 + ox;
 				monster_spt[1].palette++;
-				GsSortFastSprite(&monster_spt[1], &main_ot[active], 0);
+				draw_sprite(&monster_spt[1]);
 				if (game.timer1 > 200) {
 					display_text2(SCREEN_W2, oy + 116, monster_name[2], 12);
 					ox = (strlen(monster_name[2]) + 1) << 3;
@@ -702,10 +695,10 @@ void mode_intro(void) {
 					monster_spt[2].y = oy + 116 - 4;
 					monster_spt[2].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
 					monster_spt[2].palette = 1;
-					GsSortFastSprite(&monster_spt[2], &main_ot[active], 0);
+					draw_sprite(&monster_spt[2]);
 					monster_spt[2].x = SCREEN_W2 + ox;
 					monster_spt[2].palette++;
-					GsSortFastSprite(&monster_spt[2], &main_ot[active], 0);
+					draw_sprite(&monster_spt[2]);
 					display_text(SCREEN_W2, oy + 148, "AND", 4);
 					if (game.timer1 > 250) {
 						display_text2(SCREEN_W2, oy + 172, monster_name[3], 12);
@@ -714,10 +707,10 @@ void mode_intro(void) {
 						monster_spt[3].y = oy + 172 - 4;
 						monster_spt[3].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
 						monster_spt[3].palette = 1;
-						GsSortFastSprite(&monster_spt[3], &main_ot[active], 0);
+						draw_sprite(&monster_spt[3]);
 						monster_spt[3].x = SCREEN_W2 + ox;
 						monster_spt[3].palette++;
-						GsSortFastSprite(&monster_spt[3], &main_ot[active], 0);
+						draw_sprite(&monster_spt[3]);
 						if (game.timer1 > 300) {
 							display_text(SCREEN_W2, oy + 204, "IN THE", 4);
 						}
@@ -851,7 +844,7 @@ void draw_title(short x, short y, unsigned short type) {
 		if (c >= 128)
 			c = 256 - c;
 		title_spt.r = title_spt.g = title_spt.b = c + 32;
-		GsSortFastSprite(&title_spt, &main_ot[active], 0);
+		draw_sprite(&title_spt);
 		title_spt.y++;
 		title_spt.v++;
 	}
@@ -866,7 +859,7 @@ void draw_title(short x, short y, unsigned short type) {
 		if (c >= 128)
 			c = 256 - c;
 		title_spt.r = title_spt.g = title_spt.b = c + 32;
-		GsSortFastSprite(&title_spt, &main_ot[active], 0);
+		draw_sprite(&title_spt);
 		title_spt.y++;
 		title_spt.v++;
 	}
@@ -881,7 +874,7 @@ void draw_title(short x, short y, unsigned short type) {
 		if (c >= 128)
 			c = 256 - c;
 		title_spt.r = title_spt.g = title_spt.b = c + 32;
-		GsSortFastSprite(&title_spt, &main_ot[active], 0);
+		draw_sprite(&title_spt);
 		title_spt.y++;
 		title_spt.v++;
 	}
@@ -893,7 +886,7 @@ void draw_title(short x, short y, unsigned short type) {
 		monster_spt[i].y = y + (qsin(((frame << 6) + (i << 10)) & 4095) >> 6) + 34;
 		monster_spt[i].u = anim_tab[PLANIM_NORMAL][(frame >> 1) & 15] << 5;
 		monster_spt[i].palette = 1;
-		GsSortFastSprite(&monster_spt[i], &main_ot[active], 0);
+		draw_sprite(&monster_spt[i]);
 	}
 }
 
@@ -1173,7 +1166,7 @@ void display_monsticon(short x, short y, unsigned short type, unsigned short col
 	monsticon_spt.v = (type & 2) << 6;
 	monsticon_spt.palette = color;
 	monsticon_spt.r = monsticon_spt.g = monsticon_spt.b = bright;
-	GsSortFastSprite(&monsticon_spt, &main_ot[active], 0);
+	draw_sprite(&monsticon_spt);
 }
 
 
@@ -1233,7 +1226,7 @@ void update_player(unsigned short p) {
 	monster_spt[pp->monster.type].y = ((MAP_H2 + 1) << 4) + (pp->monster.oy) + 16;
 	monster_spt[pp->monster.type].u = anim_tab[pp->monster.anim][(frame >> 1) & 15] << 5;
 	monster_spt[pp->monster.type].palette = p + 1;
-	GsSortFastSprite(&monster_spt[pp->monster.type], &main_ot[active], 0);
+	draw_sprite(&monster_spt[pp->monster.type]);
 	pp->aim.ox /= 2;
 }
 
@@ -1836,7 +1829,7 @@ void plmode_eat1(unsigned short p) {
 			eater_spt.y = (y << 4) + 16 - 8;
 			eater_spt.palette = color;
 			eater_spt.r = eater_spt.g = eater_spt.b = ep->bright << 3;
-			GsSortFastSprite(&eater_spt, &main_ot[active], 0);
+			draw_sprite(&eater_spt);
 			eat_flag = 1;
 		}
 	}
@@ -1873,7 +1866,7 @@ void plmode_eat2(unsigned short p) {
 			eater_spt.y = y - 8;
 			eater_spt.palette = ep->color;
 			eater_spt.r = eater_spt.g = eater_spt.b = ep->bright << 3;
-			GsSortFastSprite(&eater_spt, &main_ot[active], 0);
+			draw_sprite(&eater_spt);
 			if (ep->mode == EMODE_EAT)		// silly, but works
 				create_bubblefx(x + 4, y + 4);
 			break;
@@ -2105,7 +2098,7 @@ void draw_bubble(short x, short y, unsigned short id) {
 		bubble_spt[type].y = y;
 		bubble_spt[type].palette = color;
 		bubble_spt[type].r = bubble_spt[type].g = bubble_spt[type].b = 128;
-		GsSortFastSprite(&bubble_spt[type], &main_ot[active], 0);
+		draw_sprite(&bubble_spt[type]);
 	}
 }
 
@@ -2129,14 +2122,14 @@ void display_stats(unsigned short p) {
 	case 1:
 		wincup_spt.x = sx;
 		wincup_spt.y = 104;
-		GsSortFastSprite(&wincup_spt, &main_ot[active], 0);
+		draw_sprite(&wincup_spt);
 		break;
 	case 2:
 		wincup_spt.x = sx - 4;
 		wincup_spt.y = 104;
-		GsSortFastSprite(&wincup_spt, &main_ot[active], 0);
+		draw_sprite(&wincup_spt);
 		wincup_spt.x += 8;
-		GsSortFastSprite(&wincup_spt, &main_ot[active], 0);
+		draw_sprite(&wincup_spt);
 		break;
 	}
 }
@@ -2152,7 +2145,7 @@ void draw_timebar(unsigned short p) {
 		timebar_spt.w = ti << 1;
 		timebar_spt.u = 64 - ti;
 		timebar_spt.v = frame >> 1 & 63;
-		GsSortFastSprite(&timebar_spt, &main_ot[active], 0);
+		draw_sprite(&timebar_spt);
 	}
 }
 
@@ -2161,7 +2154,7 @@ void draw_foreground(void) {
 	unsigned short s;
 
 	for (s = 0; s < 7; s++)
-		GsSortFastSprite(&screen_spt[s], &main_ot[active], 0);
+		draw_sprite(&screen_spt[s]);
 }
 
 
@@ -2185,7 +2178,7 @@ void draw_background(void) {
 		bg_spt.y = (y << 6) - oy;
 		for (x = 0; x <= 6; x++) {
 			bg_spt.x = (x << 6) - ox;
-			GsSortFastSprite(&bg_spt, &main_ot[active], 0);
+			draw_sprite(&bg_spt);
 		}
 	}
 }
@@ -2353,7 +2346,7 @@ void update_fx(void) {
 			bubble_spt[2].x = magicfx[i].x;
 			bubble_spt[2].y = magicfx[i].y;
 			bubble_spt[2].r = bubble_spt[2].g = bubble_spt[2].b = magicfx[i].bright;
-			GsSortFastSprite(&bubble_spt[2], &main_ot[active], 0);
+			draw_sprite(&bubble_spt[2]);
 
 			magicfx[i].bright -= magicfx[i].speed;
 		}
@@ -2364,7 +2357,7 @@ void update_fx(void) {
 			bubblefx_spt.x = bubblefx[i].x / 4;
 			bubblefx_spt.y = bubblefx[i].y / 4;
 			bubblefx_spt.r = bubblefx_spt.g = bubblefx_spt.b = bubblefx[i].bright;
-			GsSortFastSprite(&bubblefx_spt, &main_ot[active], 0);
+			draw_sprite(&bubblefx_spt);
 
 			bubblefx[i].bright -= 2;
 			bubblefx[i].x += bubblefx[i].vx;
@@ -2475,7 +2468,7 @@ void update_anitext(void) {
 				bigfont_spt.v = ap->chr[i].v;
 				if (ap->color < 0)
 					bigfont_spt.palette = (((frame >> 1) + i) % 12);
-				GsSortFastSprite(&bigfont_spt, &main_ot[active], 0);
+				draw_sprite(&bigfont_spt);
 			}
 		}
 	}
@@ -2493,7 +2486,7 @@ void display_text(short ox, short oy, char* txt, unsigned short color) {
 		if (c >= 1) {
 			font_spt.u = (c & 0x1f) << 3;
 			font_spt.v = (c & 0x20) >> 1;
-			GsSortFastSprite(&font_spt, &main_ot[active], 0);
+			draw_sprite(&font_spt);
 		}
 		font_spt.x += 8;
 	}
@@ -2519,7 +2512,7 @@ void display_text2(short ox, short oy, char* txt, short color) {
 		if (c >= 1) {
 			bigfont_spt.u = (c & 0x0f) << 4;
 			bigfont_spt.v = (c >> 4) * 24;
-			GsSortFastSprite(&bigfont_spt, &main_ot[active], 0);
+			draw_sprite(&bigfont_spt);
 		}
 		bigfont_spt.x += 16;
 	}
