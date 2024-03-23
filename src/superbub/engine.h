@@ -5,13 +5,9 @@ struct GsSPRITE {
 	unsigned long attribute;
 	short x, y;
 	unsigned short w, h;
-	unsigned short tpage;
 	unsigned char u, v;
 	short palette;
 	unsigned char r, g, b;
-	short mx, my;
-	short scalex, scaley;
-	long rotate;
 };
 
 int MWbload(const char* filename, void* memory);

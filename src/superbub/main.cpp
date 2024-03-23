@@ -19,6 +19,7 @@
 
 static std::shared_ptr<spdlog::sinks::sink> consoleSink;
 static std::shared_ptr<spdlog::logger> raylibLog;
+static std::shared_ptr<spdlog::logger> timLog;
 static std::shared_ptr<spdlog::logger> gameLog;
 
 // Types //
@@ -2669,11 +2670,15 @@ static void traceLogCallback(int logLevel, const char* text, va_list args) {
 void initialize(void) {
 	consoleSink.reset(new spdlog::sinks::stdout_color_sink_mt);
 	raylibLog.reset(new spdlog::logger("raylib", consoleSink));
+	timLog.reset(new spdlog::logger("tim", consoleSink));
 	gameLog.reset(new spdlog::logger("game", consoleSink));
 
 	SetTraceLogCallback(&traceLogCallback);
+	Tim::setLogger(timLog);
 
 	InitWindow(SCREEN_W, SCREEN_H, "Superbub");
+	SetTargetFPS(60);
+
 	GetPadBuf(&pad[0].buffer, &pad[1].buffer);
 
 	//	printf("Redirecting CD I/O...\n");
@@ -2860,10 +2865,6 @@ void init_sprite(const Tim* tim, GsSPRITE* spt) {
 	spt->v = 0;
 	spt->palette = 0;
 	spt->r = spt->g = spt->b = 128;
-	spt->mx = tim->logicalWidth >> 1;
-	spt->my = tim->logicalHeight >> 1;
-	spt->scalex = spt->scaley = 1;
-	spt->rotate = 0;
 }
 
 short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
