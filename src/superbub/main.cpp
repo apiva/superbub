@@ -195,11 +195,9 @@ void start_sfx(unsigned short);
 void update_sfx(void);
 void update_music(void);
 void initialize(void);
-void init_memory(void);
 void init_tims(void);
 void init_sound(void);
 void init_sprite(const Tim*, GsSPRITE*);
-void init_screen(void);
 short load_vab(void*, char*, char*);
 void wait_swap(void);
 
@@ -273,7 +271,6 @@ unsigned short master_pad;
 #define LOADAREA_SIZE 0x40000
 
 void* load_addr;
-GsIMAGE load_img;
 
 
 // Audio Stuff //
@@ -607,13 +604,6 @@ unsigned short next_bubblefx = 0;
 // Functions //
 
 int main() {
-	uintptr_t lclHeapStart = (_end & 0xfffffff0L) + 0x10;
-	uintptr_t lclHeapSize = ((_stack_addr - (_stack_size << 10)) & 0xfffffff0L) - lclHeapStart;
-
-	InitHeap((unsigned long*)lclHeapStart, lclHeapSize);
-	//	printf("HeapStart=%8x\n",lclHeapStart);
-	//	printf("HeapSize=%x (%dK)\n",lclHeapSize,lclHeapSize>>10);
-
 	initialize();
 
 	frame = 0;
@@ -2697,8 +2687,7 @@ void initialize(void) {
 
 	SetTraceLogCallback(&traceLogCallback);
 
-	init_memory();
-	init_screen();
+	InitWindow(SCREEN_W, SCREEN_H, "Superbub");
 	GetPadBuf(&pad[0].buffer, &pad[1].buffer);
 
 	//	printf("Redirecting CD I/O...\n");
@@ -2707,25 +2696,6 @@ void initialize(void) {
 	init_tims();
 	init_sound();
 }
-
-
-void init_memory(void) {
-	//	printf("Allocating memory...\n");
-
-	packet_addr[0] = malloc(PACKETAREA_SIZE);
-	//	printf("packet_addr[0]=%x\n",packet_addr[0]);
-	packet_addr[1] = malloc(PACKETAREA_SIZE);
-	//	printf("packet_addr[1]=%x\n",packet_addr[1]);
-
-	vab[0].vh_addr = malloc(VH0_SIZE);
-	//	printf("vab[0].vh_addr=%x\n",vab[0].vh_addr);
-	vab[1].vh_addr = malloc(VH1_SIZE);
-	//	printf("vab[1].vh_addr=%x\n",vab[1].vh_addr);
-
-	load_addr = malloc(LOADAREA_SIZE);
-	//	printf("load_addr=%x\n",load_addr);
-}
-
 
 void init_tims(void) {
 	unsigned short i;
@@ -2909,38 +2879,6 @@ void init_sprite(const Tim* tim, GsSPRITE* spt) {
 	spt->scalex = spt->scaley = 1;
 	spt->rotate = 0;
 }
-
-
-void init_screen(void) {
-	extern DISPENV GsDISPENV;
-	RECT rect;
-
-	SetVideoMode(MODE_PAL);
-	GsInitGraph(SCREEN_W, SCREEN_H, 0x0004, 0, 0);
-	GsDefDispBuff(0, 0, 0, SCREEN_H);
-	GsDISPENV.screen.x = 0;
-	GsDISPENV.screen.y = 20;
-	GsDISPENV.screen.h = SCREEN_H;
-	GsDISPENV.screen.w = SCREEN_W;
-
-	main_ot[0].length = OT_LENGTH;
-	main_ot[1].length = OT_LENGTH;
-	main_ot[0].org = main_tag[0];
-	main_ot[1].org = main_tag[1];
-	GsClearOt(0, 0, &main_ot[0]);
-	GsClearOt(0, 0, &main_ot[1]);
-
-	rect.x = 0;
-	rect.y = 0;
-	rect.w = 1024;
-	rect.h = 256;
-	ClearImage(&rect, 0, 0, 0);
-	rect.y = 256;
-	ClearImage(&rect, 0, 0, 0);
-
-	wait_swap();
-}
-
 
 short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	short id = -1;
