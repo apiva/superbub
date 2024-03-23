@@ -18,9 +18,19 @@ struct ClutMorph {
 class Tim {
 public:
 	static std::shared_ptr<spdlog::logger> logger;
+	static std::filesystem::path exportPath;
+	static std::filesystem::path importPath;
 
 	static void setLogger(std::shared_ptr<spdlog::logger> _logger) {
 		logger = _logger;
+	}
+
+	static void enableTimExport(const std::filesystem::path& path) {
+		exportPath = path;
+	}
+
+	static void enableTimImport(const std::filesystem::path& path) {
+		importPath = path;
 	}
 
 	static Tim load(const std::filesystem::path& path);
@@ -36,13 +46,10 @@ public:
 
 	int logicalWidth = 0;
 	int logicalHeight = 0;
-	Image image;
 	Texture texture;
 	std::vector<Rectangle> palettedBounds;
 
 	bool valid() const {
-		return image.data != nullptr;
+		return texture.id != 0;
 	}
-
-	bool exportImage(const std::filesystem::path& path) const;
 };

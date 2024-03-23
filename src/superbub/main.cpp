@@ -211,6 +211,8 @@ void fetch_input();
 
 DEFINE_bool(debug, false, "Enable debug");
 DEFINE_bool(psm_characters, false, "Use PSM character images");
+DEFINE_string(export_tims, "", "Export converted TIMs to specified folder");
+DEFINE_string(import_tims, "", "Use the images in the specified folder to replace the TIMs");
 
 // Screen & GPU Stuff //
 
@@ -2694,6 +2696,12 @@ void initialize(void) {
 
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
+	if (!FLAGS_export_tims.empty()) {
+		Tim::enableTimExport(FLAGS_export_tims);
+	}
+	if (!FLAGS_import_tims.empty()) {
+		Tim::enableTimImport(FLAGS_import_tims);
+	}
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(SCREEN_W, SCREEN_H, "Superbub");

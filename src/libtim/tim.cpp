@@ -92,24 +92,21 @@ static Clut morphClut(const Clut& clut, const ClutMorph& morph) {
 }
 
 std::shared_ptr<spdlog::logger> Tim::logger;
+std::filesystem::path Tim::exportPath;
+std::filesystem::path Tim::importPath;
 
 Tim::Tim() {
-	memset(&image, 0, sizeof(Image));
 	memset(&texture, 0, sizeof(Texture));
 }
 
 Tim::~Tim() {
-	UnloadImage(image);
-	memset(&image, 0, sizeof(Image));
-
 	UnloadTexture(texture);
 	memset(&texture, 0, sizeof(Texture));
 }
 
-Tim::Tim(Tim&& other) : logicalWidth(other.logicalWidth), logicalHeight(other.logicalHeight), image(other.image), texture(other.texture), palettedBounds(std::move(other.palettedBounds)) {
+Tim::Tim(Tim&& other) : logicalWidth(other.logicalWidth), logicalHeight(other.logicalHeight), texture(other.texture), palettedBounds(std::move(other.palettedBounds)) {
 	other.logicalWidth = 0;
 	other.logicalHeight = 0;
-	memset(&other.image, 0, sizeof(Image));
 	memset(&other.texture, 0, sizeof(Texture));
 }
 
@@ -121,8 +118,8 @@ Tim& Tim::operator=(Tim&& other) {
 		logicalHeight = other.logicalHeight;
 		other.logicalHeight = 0;
 
-		image = other.image;
-		memset(&other.image, 0, sizeof(Image));
+		UnloadTexture(texture);
+		memset(&texture, 0, sizeof(Texture));
 
 		texture = other.texture;
 		memset(&other.texture, 0, sizeof(Texture));
@@ -199,11 +196,14 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 		tim.logicalHeight = timfile.imageHeader.height;
 		logger->info("Color mode {}, image width = {}, image height = {}, palettes = {}", color_mode_caption, tim.logicalWidth, tim.logicalHeight, all_cluts.size());
 
-		tim.image.mipmaps = 1;
-		tim.image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-		tim.image.width = tim.logicalWidth;
-		tim.image.height = tim.logicalHeight * all_cluts.size();
-		tim.image.data = RL_MALLOC(sizeof(uint32_t) * tim.image.width * tim.image.height);
+		Image complete_image;
+		memset(&complete_image, 0, sizeof(Image));
+		complete_image.mipmaps = 1;
+		complete_image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+		complete_image.width = tim.logicalWidth;
+		complete_image.height = tim.logicalHeight * all_cluts.size();
+		complete_image.data = RL_MALLOC(sizeof(uint32_t) * complete_image.width * complete_image.height);
+		memset(complete_image.data, 0, sizeof(uint32_t) * complete_image.width * complete_image.height);
 
 		for (int clut_index = 0; clut_index < all_cluts.size(); ++clut_index) {
 			const Clut& clut = all_cluts.at(clut_index);
@@ -214,6 +214,7 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 			image.width = tim.logicalWidth;
 			image.height = tim.logicalHeight;
 			image.data = RL_MALLOC(sizeof(uint32_t) * image.width * image.height);
+			memset(image.data, 0, sizeof(uint32_t) * image.width * image.height);
 
 			if (color_mode == ColorMode::Indices4bits) {
 				int* pixel = reinterpret_cast<int*>(image.data);
@@ -240,11 +241,24 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 
 			const Rectangle source_rect{ 0, 0, float(image.width), float(image.height) };
 			const Rectangle dest_rect{ 0, float(image.height * clut_index), float(image.width), float(image.height) };
-			ImageDraw(&tim.image, image, source_rect, dest_rect, WHITE);
+			ImageDraw(&complete_image, image, source_rect, dest_rect, WHITE);
 			tim.palettedBounds.push_back(dest_rect);
 		}
 
-		tim.texture = LoadTextureFromImage(tim.image);
+		tim.texture = LoadTextureFromImage(complete_image);
+
+		if (!exportPath.empty()) {
+			const std::filesystem::path export_filename = exportPath / std::filesystem::path(path).replace_extension(".png");
+			logger->info("Exporting TIM to path {}", export_filename.string());
+
+			std::filesystem::create_directories(export_filename.parent_path());
+			if (!ExportImage(complete_image, export_filename.string().c_str())) {
+				logger->error("Failed to export TIM to path {}", export_filename.string());
+			}
+		}
+
+		UnloadImage(complete_image);
+
 		return tim;
 	}
 	else if (color_mode == ColorMode::Colors16bits) {
@@ -257,8 +271,4 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 	}
 
 	return Tim{};
-}
-
-bool Tim::exportImage(const std::filesystem::path& path) const {
-	return ExportImage(image, path.string().c_str());
 }
