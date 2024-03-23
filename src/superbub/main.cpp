@@ -15,6 +15,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <tim.hpp>
 #include <map>
+#include <gflags/gflags.h>
 
 // Logs //
 
@@ -208,8 +209,7 @@ void flush_sprites();
 void get_pad_buffers(unsigned char** pad1, unsigned char** pad2);
 void fetch_input();
 
-unsigned short debug_flag = 1;
-
+DEFINE_bool(debug, false, "Enable debug");
 
 // Screen & GPU Stuff //
 
@@ -596,11 +596,12 @@ unsigned short next_bubblefx = 0;
 
 // Functions //
 
-int main() {
+int main(int argc, char* argv[]) {
+	gflags::ParseCommandLineFlags(&argc, &argv, false);
+
 	initialize();
 
 	frame = 0;
-	debug_flag = 0;
 
 	init_intro();
 
@@ -616,7 +617,7 @@ int main() {
 		}
 		process_pads();
 		if (pad[0].pulse == (PAD_L1 | PAD_R1))
-			debug_flag ^= 1;
+			FLAGS_debug = !FLAGS_debug;
 
 		update_music();
 		update_sfx();
@@ -625,9 +626,7 @@ int main() {
 
 		(*game.mode_func)();
 
-		if (debug_flag) {
-			gameLog->info("FRAME: {}", frame);
-		}
+		gameLog->trace("FRAME: {}", frame);
 
 		Camera2D camera;
 		memset(&camera, 0, sizeof(Camera2D));
@@ -2688,6 +2687,10 @@ void initialize(void) {
 	timLog.reset(new spdlog::logger("tim", consoleSink));
 	gameLog.reset(new spdlog::logger("game", consoleSink));
 
+	raylibLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
+	timLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
+	gameLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
+
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
 
@@ -2897,11 +2900,11 @@ short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 			//			printf("VAB ID=%d\n",id);
 		}
 		else {
-			printf("Failed to load: %s\n", vb_file);
+			gameLog->error("Failed to load: {}", vb_file);
 		}
 	}
 	else {
-		printf("Failed to load: %s\n", vh_file);
+		gameLog->error("Failed to load: {}", vh_file);
 	}
 	return(id);
 }
