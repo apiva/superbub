@@ -28,12 +28,6 @@ struct GsOT {
 };
 
 struct PACKET;
-///////////////////////
-// Display functions //
-///////////////////////
-
-int DrawSync(int mode);
-int VSync(int mode);
 
 /////////////////////
 // Image functions //
@@ -54,11 +48,9 @@ void GetPadBuf(volatile unsigned char** buf1, volatile unsigned char** buf2);
 int GsGetActiveBuff();
 PACKET* GsGetWorkBase();
 void GsClearOt(unsigned short offset, unsigned short point, GsOT* otp);
-void GsDrawOt(GsOT* otp);
 void GsSetWorkBase(PACKET* base_addr);
 void GsSortClear(unsigned char r, unsigned char g, unsigned char b, GsOT* otp);
 void GsSortFastSprite(GsSPRITE* sp, GsOT* otp, unsigned short pri);
-void GsSwapDispBuff();
 
 /////////////////////
 // Audio functions //

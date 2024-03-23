@@ -199,7 +199,6 @@ void init_tims(void);
 void init_sound(void);
 void init_sprite(const Tim*, GsSPRITE*);
 short load_vab(void*, char*, char*);
-void wait_swap(void);
 
 
 unsigned short debug_flag = 1;
@@ -226,8 +225,6 @@ GsOT_TAG main_tag[2][1 << OT_LENGTH];
 
 unsigned long frame = 0;
 unsigned short active;
-unsigned short cls_flag = 0;
-unsigned short code_hsync, draw_hsync, peak_hsync;
 
 
 // Controller Stuff //
@@ -613,7 +610,14 @@ int main() {
 
 	//	printf("Main Loop.\n");
 
-	while (1) {
+	while (!WindowShouldClose()) {
+		Camera2D camera;
+		memset(&camera, 0, sizeof(Camera2D));
+		camera.zoom = 1;
+
+		BeginDrawing();
+		BeginMode2D(camera);
+
 		active = GsGetActiveBuff();
 		GsSetWorkBase((PACKET*)packet_addr[active]);
 		GsClearOt(0, 0, &main_ot[active]);
@@ -636,19 +640,13 @@ int main() {
 
 		if (debug_flag) {
 			gameLog->info("FRAME: {}", frame);
-			gameLog->info("CODE HSYNC: {}", code_hsync);
-			gameLog->info("DRAW HSYNC: {}", draw_hsync);
-			gameLog->info("PEAK HSYNC: {}", peak_hsync);
 			gameLog->info("PACKET MEM: {}", uintptr_t(GsGetWorkBase()) - uintptr_t(packet_addr[active]));
 		}
 
-		wait_swap();
+		EndMode2D();
+		EndDrawing();
 
-		if (cls_flag) {
-			cls_flag = 0;
-			GsSortClear(0, 0, 0, &main_ot[active]);
-		}
-		GsDrawOt(&main_ot[active]);
+		frame++;
 	}
 }
 
@@ -2885,11 +2883,9 @@ short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 
 	gameLog->info("LOAD: {}", vh_file);
 	gameLog->info("ADDR: {}", vh_addr);
-	wait_swap();
 	if (MWbload(vh_file, (void*)vh_addr) > 0) {
 		gameLog->info("LOAD: {}", vb_file);
 		gameLog->info("ADDR: {}", load_addr);
-		wait_swap();
 		if (MWbload(vb_file, (void*)load_addr) > 0) {
 			id = SsVabTransfer((void*)vh_addr, (void*)load_addr, -1, 1);
 			//			printf("VAB ID=%d\n",id);
@@ -2904,19 +2900,3 @@ short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
 	return(id);
 }
 
-void wait_swap(void) {
-	if (debug_flag) {
-		gameLog->flush();
-	}
-	code_hsync = VSync(1);
-	DrawSync(0);
-	draw_hsync = VSync(0);
-	GsSwapDispBuff();
-	if (frame % 50 == 0) {
-		peak_hsync = 0;
-	}
-	if (draw_hsync > peak_hsync) {
-		peak_hsync = draw_hsync;
-	}
-	frame++;
-}
