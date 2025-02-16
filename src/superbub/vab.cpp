@@ -260,15 +260,15 @@ Vab Vab::load(const std::filesystem::path& path) {
 				VabSound vabsound;
 				vabsound.program = program;
 				vabsound.tone = tone;
-				memset(&vabsound.sound, 0, sizeof(Sound));
+				memset(&vabsound.wave, 0, sizeof(Wave));
 
 				if (!hdFolder.empty()) {
 					const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
 					if (std::filesystem::exists(hd_path)) {
 						logger->info("Loading HD sound {}", hd_path);
 
-						vabsound.sound = LoadSound(hd_path.string().c_str());
-						if (!IsSoundValid(vabsound.sound)) {
+						vabsound.wave = LoadWave(hd_path.string().c_str());
+						if (!IsWaveValid(vabsound.wave)) {
 							logger->error("Failed to load HD sound {}", hd_path);
 						}
 
@@ -276,8 +276,6 @@ Vab Vab::load(const std::filesystem::path& path) {
 						continue;
 					}
 				}
-
-				Wave wave;
 
 				{
 					logger->info("Creating WAV from VAB data path {}, program {}, tone {}", path, program, tone);
@@ -290,8 +288,8 @@ Vab Vab::load(const std::filesystem::path& path) {
 					adpcmToWav(vb_stream, vag_info.size, 44100 / 2, wav_stream);
 					const std::string wav_data = wav_stream.str();
 
-					wave = LoadWaveFromMemory(".wav", reinterpret_cast<const unsigned char*>(wav_data.data()), wav_data.size());
-					if (!IsWaveValid(wave)) {
+					vabsound.wave = LoadWaveFromMemory(".wav", reinterpret_cast<const unsigned char*>(wav_data.data()), wav_data.size());
+					if (!IsWaveValid(vabsound.wave)) {
 						logger->error("Failed to create WAV for VAB path {}, program {}, tone {}", path, program, tone);
 						vab.sounds.emplace_back(std::move(vabsound));
 						continue;
@@ -303,15 +301,9 @@ Vab Vab::load(const std::filesystem::path& path) {
 					logger->info("Exporting HD asset {}", hd_path);
 
 					std::filesystem::create_directories(hd_path.parent_path());
-					if (!ExportWave(wave, hd_path.string().c_str())) {
+					if (!ExportWave(vabsound.wave, hd_path.string().c_str())) {
 						logger->error("Failed to export HD asset {}", hd_path);
 					}
-				}
-
-				logger->info("Creating sound for VAB file {}, program {}, tone {}", path, program, tone);
-				vabsound.sound = LoadSoundFromWave(wave);
-				if (!IsSoundValid(vabsound.sound)) {
-					logger->error("Failed to create sound for VAB file {}, program {}, tone {}", path, program, tone);
 				}
 
 				vab.sounds.emplace_back(std::move(vabsound));
@@ -324,6 +316,72 @@ Vab Vab::load(const std::filesystem::path& path) {
 
 Vab::~Vab() {
 	for (auto& tone : sounds) {
-		UnloadSound(tone.sound);
+		UnloadWave(tone.wave);
 	}
+}
+
+Wave& Vab::getAudio(const int program, const int tone) {
+	for (VabSound& sound : sounds) {
+		if (sound.program == program && sound.tone == tone) {
+			return sound.wave;
+		}
+	}
+
+	static Wave null_wave;
+	memset(&null_wave, 0, sizeof(Wave));
+	return null_wave;
+}
+
+static float shortToFloatVolume(const short volume) {
+	return float(std::clamp<short>(volume, 0, 127)) / 127;
+}
+
+Voices::Voices() {
+	memset(sounds.data(), 0, sounds.size() * sizeof(Sound));
+}
+
+Voices::~Voices() {
+	allVoicesOff();
+}
+
+Voices::Voice Voices::voiceOn(Vab& vab, const int program, const int tone, const int note, const short volume) {
+	for (Voice voice = 0; voice < MaxVoices; ++voice) {
+		Sound& sound = sounds.at(voice);
+		if (!IsSoundValid(sound)) {
+			Wave& wave = vab.getAudio(program, tone);
+			sound = LoadSoundFromWave(wave);
+			SetSoundVolume(sound, shortToFloatVolume(volume));
+			PlaySound(sound);
+			return voice;
+		}
+	}
+
+	return NullVoice;
+}
+
+void Voices::voiceOff(const Voice voice) {
+	if (voice == NullVoice) {
+		return;
+	}
+
+	Sound& sound = sounds.at(voice);
+	if (!IsSoundValid(sound)) {
+		return;
+	}
+
+	if (IsSoundPlaying(sound)) {
+		StopSound(sound);
+	}
+	UnloadSound(sound);
+	memset(&sound, 0, sizeof(Sound));
+}
+
+void Voices::allVoicesOff() {
+	for (Voice voice = 0; voice < MaxVoices; ++voice) {
+		voiceOff(voice);
+	}
+}
+
+void Voices::setVolume(const short volume) {
+	SetMasterVolume(shortToFloatVolume(volume));
 }

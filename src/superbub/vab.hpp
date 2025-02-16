@@ -1,6 +1,7 @@
 #pragma once
 #include <raylib.h>
 #include <filesystem>
+#include <array>
 #include <spdlog/logger.h>
 
 class Vab {
@@ -22,7 +23,7 @@ public:
 	Vab& operator=(const Vab&) = delete;
 	Vab& operator=(Vab&&) = default;
 
-	Sound& getSound(const int program, const int tone);
+	Wave& getAudio(const int program, const int tone);
 
 private:
 	static std::shared_ptr<spdlog::logger> logger;
@@ -31,10 +32,29 @@ private:
 	struct VabSound {
 		int program;
 		int tone;
-		Sound sound;
+		Wave wave;
 	};
 
 	std::vector<VabSound> sounds;
 
 	Vab() {}
+};
+
+class Voices {
+public:
+	using Voice = short;
+	static constexpr Voice NullVoice = -1;
+	static constexpr size_t MaxVoices = 24;
+
+	Voices();
+	~Voices();
+
+	Voice voiceOn(Vab& vab, const int program, const int tone, const int note, const short volume);
+	void voiceOff(const Voice voice);
+	void allVoicesOff();
+	void setVolume(const short volume);
+
+private:
+
+	std::array<Sound, MaxVoices> sounds;
 };

@@ -26,6 +26,8 @@ static std::shared_ptr<spdlog::logger> timLog;
 static std::shared_ptr<spdlog::logger> vabLog;
 static std::shared_ptr<spdlog::logger> gameLog;
 
+std::unique_ptr<Voices> voices;
+
 // Types //
 
 
@@ -203,7 +205,7 @@ void initialize(void);
 void init_tims(void);
 void init_sound(void);
 void init_sprite(const Tim*, GsSPRITE*);
-short load_vab(void*, char*, char*);
+std::unique_ptr<Vab> load_vab(const char*);
 
 void draw_sprite(const GsSPRITE*);
 void flush_sprites();
@@ -277,10 +279,7 @@ void* load_addr;
 #define VH0_SIZE 0x4000
 #define VH1_SIZE 0x4000
 
-struct {
-	short id;
-	void* vh_addr;
-} vab[2];
+std::unique_ptr<Vab> vab[2];
 
 #define MAX_SFX 18
 
@@ -618,7 +617,7 @@ int main(int argc, char* argv[]) {
 
 		read_pads();
 		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
-			SsUtAllKeyOff(0);
+			voices->allVoicesOff();
 			return(0);
 		}
 		process_pads();
@@ -2614,7 +2613,7 @@ void start_sfx(unsigned short type) {
 		if (sfx_chan[c].timer && sfx_chan[c].type == type) {
 			switch (sfx_tab[type].mode) {
 			case SFXMODE_MONO:
-				SsUtKeyOff(c, vab[0].id, sfx_chan[c].prog, 0, sfx_chan[c].note);
+				voices->voiceOff(c);
 			case SFXMODE_POLY:
 				noteon_flag = 1;
 				break;
@@ -2628,7 +2627,7 @@ void start_sfx(unsigned short type) {
 	if (noteon_flag || c == 24) {
 		prog = sfx_tab[type].prog;
 		note = sfx_tab[type].note;
-		c = SsUtKeyOn(vab[0].id, prog, 0, note, 0, sfx_tab[type].voll, sfx_tab[type].voll);
+		c = voices->voiceOn(*vab[0], prog, 0, note, sfx_tab[type].voll);
 		if (c >= 0) {
 			sfx_chan[c].type = type;
 			sfx_chan[c].prog = prog;
@@ -2645,7 +2644,7 @@ void update_sfx(void) {
 	for (c = 0; c < 24; c++) {
 		if (sfx_chan[c].timer) {
 			if (--sfx_chan[c].timer == 0) {
-				SsUtKeyOff(c, vab[0].id, sfx_chan[c].prog, 0, sfx_chan[c].note);
+				voices->voiceOff(c);
 			}
 		}
 	}
@@ -2659,7 +2658,7 @@ void update_music(void) {
 		for (c = 0; c < 3; c++) {
 			p = music_tab[music.step][c].prog;
 			if (p >= 0) {
-				SsUtKeyOff(music.chan[c], vab[1].id, p, 0, 60);
+				voices->voiceOff(music.chan[c]);
 			}
 		}
 
@@ -2672,7 +2671,7 @@ void update_music(void) {
 			p = music_tab[music.step][c].prog;
 			if (p >= 0) {
 				v = music_tab[music.step][c].vol;
-				music.chan[c] = SsUtKeyOn(vab[1].id, p, 0, 60, 0, v, v);
+				music.chan[c] = voices->voiceOn(*vab[1], p, 0, 60, v);
 			}
 		}
 	}
@@ -2698,6 +2697,8 @@ void initialize(void) {
 	timLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
 	vabLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
 	gameLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
+
+	voices.reset(new Voices);
 
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
@@ -2893,16 +2894,9 @@ void init_tims(void) {
 
 void init_sound(void) {
 	InitAudioDevice();
-
-	unsigned short i;
-
-	for (i = 0; i < 16; i++)
-		SsVabClose(i);
-
-	vab[0].id = load_vab(vab[0].vh_addr, "FX01.VH", "FX01.VB");
-	vab[1].id = load_vab(vab[1].vh_addr, "MUSIC01.VH", "MUSIC01.VB");
-
-	SsSetMVol(127, 127);
+	vab[0] = load_vab("FX01.VH");
+	vab[1] = load_vab("MUSIC01.VH");
+	voices->setVolume(127);
 }
 
 
@@ -2918,26 +2912,9 @@ void init_sprite(const Tim* tim, GsSPRITE* spt) {
 	spt->r = spt->g = spt->b = 128;
 }
 
-short load_vab(void* vh_addr, char* vh_file, char* vb_file) {
-	short id = -1;
-
-	gameLog->info("LOAD: {}", vh_file);
-	gameLog->info("ADDR: {}", vh_addr);
-	if (MWbload(vh_file, (void*)vh_addr) > 0) {
-		gameLog->info("LOAD: {}", vb_file);
-		gameLog->info("ADDR: {}", load_addr);
-		if (MWbload(vb_file, (void*)load_addr) > 0) {
-			id = SsVabTransfer((void*)vh_addr, (void*)load_addr, -1, 1);
-			//			printf("VAB ID=%d\n",id);
-		}
-		else {
-			gameLog->error("Failed to load: {}", vb_file);
-		}
-	}
-	else {
-		gameLog->error("Failed to load: {}", vh_file);
-	}
-	return(id);
+std::unique_ptr<Vab> load_vab(const char* vh_file) {
+	std::unique_ptr<Vab> vab(new Vab(Vab::load(vh_file)));
+	return vab;
 }
 
 std::vector<GsSPRITE> sprites;
