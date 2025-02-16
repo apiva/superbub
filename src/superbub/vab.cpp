@@ -41,7 +41,7 @@ struct VhProgramAttributes {
 };
 
 struct VhToneAttributes {
-	uint8_t prior; /*tone priority (0 – 127); used for controlling allocation when more voices than can be keyed on are requested*/
+	uint8_t prior; /*tone priority (0 - 127); used for controlling allocation when more voices than can be keyed on are requested*/
 	uint8_t mode; /*tone mode (0 = normal; 4 = reverb	applied */
 	uint8_t vol; /*tone volume*/
 	uint8_t pan; /*tone pan*/
