@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <inttypes.h>
 #include <sstream>
+#include <spdlog/fmt/std.h>
 
 #pragma optimize("",off)
 
@@ -86,7 +87,7 @@ static_assert(sizeof(VhToneAttributes) == 32);
 static_assert(sizeof(VhWaveOffsets) == 512);
 
 std::shared_ptr<spdlog::logger> Vab::logger;
-std::filesystem::path Vab::exportPath;
+std::filesystem::path Vab::hdFolder;
 
 // https://github.com/ColdSauce/psxsdk/blob/master/tools/vag2wav.c
 static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsigned int samp_freq, std::ostream& wav) {
@@ -230,6 +231,8 @@ Vab Vab::load(const std::filesystem::path& path) {
 		}
 	}
 
+	logger->info("Reading VAB file: path {}, programs {}, tones {}, vags {}", path, vh.header.programCount, vh.header.toneCount, vh.header.vagCount);
+
 	struct VagInfo {
 		int vagIndex;
 		size_t offset;
@@ -247,20 +250,71 @@ Vab Vab::load(const std::filesystem::path& path) {
 		current_offset += info.size;
 		vagInfos.push_back(info);
 	}
+
 	{
 		std::ifstream vb_stream(vb_path, std::ios::binary);
 
 		for (int program = 0; program < vh.header.programCount; ++program) {
 			const VhProgramAttributes& program_attribs = vh.programAttributes.at(program);
 			for (int tone = 0; tone < program_attribs.tones; ++tone) {
-				const VhToneAttributes& tone_attribs = vh.programTones.at(program).toneAttributes.at(tone);
-				const VagInfo& vag_info = vagInfos.at(tone_attribs.vag - 1);
+				VabSound vabsound;
+				vabsound.program = program;
+				vabsound.tone = tone;
+				memset(&vabsound.sound, 0, sizeof(Sound));
 
-				std::filesystem::path wav_path = std::filesystem::path("temp") / (path.stem().string() + "_" + std::to_string(program) + "_" + std::to_string(tone) + ".wav");
-				std::ofstream wav(wav_path, std::ios::binary);
+				if (!hdFolder.empty()) {
+					const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
+					if (std::filesystem::exists(hd_path)) {
+						logger->info("Loading HD sound {}", hd_path);
 
-				vb_stream.seekg(vag_info.offset, std::ios::beg);
-				adpcmToWav(vb_stream, vag_info.size, 44100 / 2, wav);
+						vabsound.sound = LoadSound(hd_path.string().c_str());
+						if (!IsSoundReady(vabsound.sound)) {
+							logger->error("Failed to load HD sound {}", hd_path);
+						}
+
+						vab.sounds.emplace_back(std::move(vabsound));
+						continue;
+					}
+				}
+
+				Wave wave;
+
+				{
+					logger->info("Creating WAV from VAB data path {}, program {}, tone {}", path, program, tone);
+
+					const VhToneAttributes& tone_attribs = vh.programTones.at(program).toneAttributes.at(tone);
+					const VagInfo& vag_info = vagInfos.at(tone_attribs.vag - 1);
+
+					std::stringstream wav_stream;
+					vb_stream.seekg(vag_info.offset, std::ios::beg);
+					adpcmToWav(vb_stream, vag_info.size, 44100 / 2, wav_stream);
+					const std::string wav_data = wav_stream.str();
+
+					wave = LoadWaveFromMemory(".wav", reinterpret_cast<const unsigned char*>(wav_data.data()), wav_data.size());
+					if (!IsWaveReady(wave)) {
+						logger->error("Failed to create WAV for VAB path {}, program {}, tone {}", path, program, tone);
+						vab.sounds.emplace_back(std::move(vabsound));
+						continue;
+					}
+				}
+
+				if (!hdFolder.empty()) {
+					const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
+					logger->info("Exporting HD asset {}", hd_path);
+
+					std::filesystem::create_directories(hd_path.parent_path());
+					if (!ExportWave(wave, hd_path.string().c_str())) {
+						logger->error("Failed to export HD asset {}", hd_path);
+					}
+				}
+
+				logger->info("Creating sound for VAB file {}, program {}, tone {}", path, program, tone);
+				vabsound.sound = LoadSoundFromWave(wave);
+				if (!IsSoundReady(vabsound.sound)) {
+					logger->error("Failed to create sound for VAB file {}, program {}, tone {}", path, program, tone);
+				}
+
+				vab.sounds.emplace_back(std::move(vabsound));
 			}
 		}
 	}
@@ -269,7 +323,7 @@ Vab Vab::load(const std::filesystem::path& path) {
 }
 
 Vab::~Vab() {
-	for (auto& tone : tones) {
+	for (auto& tone : sounds) {
 		UnloadSound(tone.sound);
 	}
 }

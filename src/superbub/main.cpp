@@ -215,6 +215,7 @@ DEFINE_bool(debug, false, "Enable debug");
 DEFINE_bool(psm_characters, false, "Use PSM character images");
 DEFINE_string(export_tims, "", "Export converted TIMs to specified folder");
 DEFINE_string(import_tims, "", "Use the images in the specified folder to replace the TIMs");
+DEFINE_string(hd, "", "Folder to export / import HD assets");
 
 // Screen & GPU Stuff //
 
@@ -2701,6 +2702,7 @@ void initialize(void) {
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
 	Vab::setLogger(vabLog);
+	Vab::setHdFolder(FLAGS_hd);
 
 	if (!FLAGS_export_tims.empty()) {
 		Tim::enableTimExport(FLAGS_export_tims);
@@ -2890,6 +2892,8 @@ void init_tims(void) {
 }
 
 void init_sound(void) {
+	InitAudioDevice();
+
 	unsigned short i;
 
 	for (i = 0; i < 16; i++)

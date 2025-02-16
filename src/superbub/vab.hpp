@@ -9,32 +9,32 @@ public:
 		logger = _logger;
 	}
 
-	static void setExportPath(const std::filesystem::path& export_path) {
-		exportPath = export_path;
+	static void setHdFolder(const std::filesystem::path& hd_folder) {
+		hdFolder = hd_folder;
 	}
 
 	static Vab load(const std::filesystem::path& path);
 
 	~Vab();
 
-	//Vab(const Vab&) = delete;
-	//Vab(Vab&&) = delete;
-	//Vab& operator=(const Vab&) = delete;
-	//Vab& operator=(Vab&&) = delete;
+	Vab(const Vab&) = delete;
+	Vab(Vab&&) = default;
+	Vab& operator=(const Vab&) = delete;
+	Vab& operator=(Vab&&) = default;
 
 	Sound& getSound(const int program, const int tone);
 
 private:
 	static std::shared_ptr<spdlog::logger> logger;
-	static std::filesystem::path exportPath;
+	static std::filesystem::path hdFolder;
 
-	struct Tone {
+	struct VabSound {
 		int program;
 		int tone;
 		Sound sound;
 	};
 
-	std::vector<Tone> tones;
+	std::vector<VabSound> sounds;
 
 	Vab() {}
 };
