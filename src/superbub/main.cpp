@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "engine.h"
 #include "qsincos.h"
 #include <raylib.h>
 #include <spdlog/logger.h>
@@ -30,7 +29,15 @@ std::unique_ptr<Voices> voices;
 
 // Types //
 
-
+struct GsSPRITE {
+	const Tim* tim;
+	unsigned long attribute;
+	short x, y;
+	unsigned short w, h;
+	unsigned char u, v;
+	short palette;
+	unsigned char r, g, b;
+};
 
 typedef struct {
 	unsigned short mode, mode2, timer;
