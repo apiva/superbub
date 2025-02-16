@@ -13,15 +13,17 @@
 #include <raylib.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <tim.hpp>
 #include <map>
 #include <gflags/gflags.h>
+#include <tim.hpp>
+#include <vab.hpp>
 
 // Logs //
 
 static std::shared_ptr<spdlog::sinks::sink> consoleSink;
 static std::shared_ptr<spdlog::logger> raylibLog;
 static std::shared_ptr<spdlog::logger> timLog;
+static std::shared_ptr<spdlog::logger> vabLog;
 static std::shared_ptr<spdlog::logger> gameLog;
 
 // Types //
@@ -2688,14 +2690,18 @@ void initialize(void) {
 	consoleSink.reset(new spdlog::sinks::stdout_color_sink_mt);
 	raylibLog.reset(new spdlog::logger("raylib", consoleSink));
 	timLog.reset(new spdlog::logger("tim", consoleSink));
+	vabLog.reset(new spdlog::logger("vab", consoleSink));
 	gameLog.reset(new spdlog::logger("game", consoleSink));
 
 	raylibLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
 	timLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
+	vabLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
 	gameLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
 
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
+	Vab::setLogger(vabLog);
+
 	if (!FLAGS_export_tims.empty()) {
 		Tim::enableTimExport(FLAGS_export_tims);
 	}
