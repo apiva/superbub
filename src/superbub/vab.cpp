@@ -268,7 +268,7 @@ Vab Vab::load(const std::filesystem::path& path) {
 						logger->info("Loading HD sound {}", hd_path);
 
 						vabsound.sound = LoadSound(hd_path.string().c_str());
-						if (!IsSoundReady(vabsound.sound)) {
+						if (!IsSoundValid(vabsound.sound)) {
 							logger->error("Failed to load HD sound {}", hd_path);
 						}
 
@@ -291,7 +291,7 @@ Vab Vab::load(const std::filesystem::path& path) {
 					const std::string wav_data = wav_stream.str();
 
 					wave = LoadWaveFromMemory(".wav", reinterpret_cast<const unsigned char*>(wav_data.data()), wav_data.size());
-					if (!IsWaveReady(wave)) {
+					if (!IsWaveValid(wave)) {
 						logger->error("Failed to create WAV for VAB path {}, program {}, tone {}", path, program, tone);
 						vab.sounds.emplace_back(std::move(vabsound));
 						continue;
@@ -310,7 +310,7 @@ Vab Vab::load(const std::filesystem::path& path) {
 
 				logger->info("Creating sound for VAB file {}, program {}, tone {}", path, program, tone);
 				vabsound.sound = LoadSoundFromWave(wave);
-				if (!IsSoundReady(vabsound.sound)) {
+				if (!IsSoundValid(vabsound.sound)) {
 					logger->error("Failed to create sound for VAB file {}, program {}, tone {}", path, program, tone);
 				}
 
