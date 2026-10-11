@@ -86,9 +86,6 @@ static_assert(sizeof(VhProgramAttributes) == 16);
 static_assert(sizeof(VhToneAttributes) == 32);
 static_assert(sizeof(VhWaveOffsets) == 512);
 
-std::shared_ptr<spdlog::logger> Vab::logger;
-std::filesystem::path Vab::hdFolder;
-
 // https://github.com/ColdSauce/psxsdk/blob/master/tools/vag2wav.c
 static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsigned int samp_freq, std::ostream& wav) {
 	{
@@ -203,7 +200,24 @@ static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsign
 	}
 }
 
-Vab Vab::load(const std::filesystem::path& path) {
+static bool loadWave(SDL_IOStream* io, Vab::Wave& wave) {
+	Uint8* raw_buffer = nullptr;
+	Uint32 length = 0;
+
+	if (io == nullptr || !SDL_LoadWAV_IO(io, true, &wave.spec, &raw_buffer, &length)) {
+		return false;
+	}
+
+	const std::unique_ptr<Uint8, void(*)(void*)> buffer(raw_buffer, &SDL_free);
+	wave.data.assign(buffer.get(), buffer.get() + length);
+	return wave.valid();
+}
+
+VabLoader::VabLoader(std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& hdFolder)
+	: logger(logger), hdFolder(hdFolder) {
+}
+
+Vab VabLoader::load(const std::filesystem::path& path) {
 	const std::filesystem::path vh_path = path;
 	const std::filesystem::path vb_path = std::filesystem::path(vh_path).replace_extension(".vb");
 
@@ -257,25 +271,25 @@ Vab Vab::load(const std::filesystem::path& path) {
 		for (int program = 0; program < vh.header.programCount; ++program) {
 			const VhProgramAttributes& program_attribs = vh.programAttributes.at(program);
 			for (int tone = 0; tone < program_attribs.tones; ++tone) {
-				VabSound vabsound;
+				Vab::VabSound vabsound;
 				vabsound.program = program;
 				vabsound.tone = tone;
-				memset(&vabsound.wave, 0, sizeof(Wave));
 
 				if (!hdFolder.empty()) {
 					const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
 					if (std::filesystem::exists(hd_path)) {
 						logger->info("Loading HD sound {}", hd_path);
 
-						vabsound.wave = LoadWave(hd_path.string().c_str());
-						if (!IsWaveValid(vabsound.wave)) {
-							logger->error("Failed to load HD sound {}", hd_path);
+						if (!loadWave(SDL_IOFromFile(hd_path.string().c_str(), "rb"), vabsound.wave)) {
+							logger->error("Failed to load HD sound {}: {}", hd_path, SDL_GetError());
 						}
 
 						vab.sounds.emplace_back(std::move(vabsound));
 						continue;
 					}
 				}
+
+				std::string wav_data;
 
 				{
 					logger->info("Creating WAV from VAB data path {}, program {}, tone {}", path, program, tone);
@@ -286,11 +300,10 @@ Vab Vab::load(const std::filesystem::path& path) {
 					std::stringstream wav_stream;
 					vb_stream.seekg(vag_info.offset, std::ios::beg);
 					adpcmToWav(vb_stream, vag_info.size, 44100 / 2, wav_stream);
-					const std::string wav_data = wav_stream.str();
+					wav_data = wav_stream.str();
 
-					vabsound.wave = LoadWaveFromMemory(".wav", reinterpret_cast<const unsigned char*>(wav_data.data()), wav_data.size());
-					if (!IsWaveValid(vabsound.wave)) {
-						logger->error("Failed to create WAV for VAB path {}, program {}, tone {}", path, program, tone);
+					if (!loadWave(SDL_IOFromConstMem(wav_data.data(), wav_data.size()), vabsound.wave)) {
+						logger->error("Failed to create WAV for VAB path {}, program {}, tone {}: {}", path, program, tone, SDL_GetError());
 						vab.sounds.emplace_back(std::move(vabsound));
 						continue;
 					}
@@ -301,7 +314,9 @@ Vab Vab::load(const std::filesystem::path& path) {
 					logger->info("Exporting HD asset {}", hd_path);
 
 					std::filesystem::create_directories(hd_path.parent_path());
-					if (!ExportWave(vabsound.wave, hd_path.string().c_str())) {
+					std::ofstream hd_stream(hd_path, std::ios::binary);
+					hd_stream.write(wav_data.data(), wav_data.size());
+					if (!hd_stream) {
 						logger->error("Failed to export HD asset {}", hd_path);
 					}
 				}
@@ -314,21 +329,14 @@ Vab Vab::load(const std::filesystem::path& path) {
 	return vab;
 }
 
-Vab::~Vab() {
-	for (auto& tone : sounds) {
-		UnloadWave(tone.wave);
-	}
-}
-
-Wave& Vab::getAudio(const int program, const int tone) {
-	for (VabSound& sound : sounds) {
+const Vab::Wave& Vab::getAudio(const int program, const int tone) const {
+	for (const VabSound& sound : sounds) {
 		if (sound.program == program && sound.tone == tone) {
 			return sound.wave;
 		}
 	}
 
-	static Wave null_wave;
-	memset(&null_wave, 0, sizeof(Wave));
+	static const Wave null_wave;
 	return null_wave;
 }
 
@@ -336,22 +344,37 @@ static float shortToFloatVolume(const short volume) {
 	return float(std::clamp<short>(volume, 0, 127)) / 127;
 }
 
-Voices::Voices() {
-	memset(sounds.data(), 0, sounds.size() * sizeof(Sound));
+Voices::Voices(std::shared_ptr<spdlog::logger> logger) : logger(logger) {
+	const SDL_AudioDeviceID device_id = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
+	if (device_id == 0) {
+		logger->error("Failed to open audio device: {}", SDL_GetError());
+		return;
+	}
+
+	device.reset(new SDL_AudioDeviceID(device_id), [](SDL_AudioDeviceID* device_id) {
+		SDL_CloseAudioDevice(*device_id);
+		delete device_id;
+	});
 }
 
-Voices::~Voices() {
-	allVoicesOff();
-}
-
-Voices::Voice Voices::voiceOn(Vab& vab, const int program, const int tone, const int note, const short volume) {
+Voices::Voice Voices::voiceOn(const Vab& vab, const int program, const int tone, const int note, const short volume) {
 	for (Voice voice = 0; voice < MaxVoices; ++voice) {
-		Sound& sound = sounds.at(voice);
-		if (!IsSoundValid(sound)) {
-			Wave& wave = vab.getAudio(program, tone);
-			sound = LoadSoundFromWave(wave);
-			SetSoundVolume(sound, shortToFloatVolume(volume));
-			PlaySound(sound);
+		std::shared_ptr<SDL_AudioStream>& stream = streams.at(voice);
+		if (stream == nullptr) {
+			const Vab::Wave& wave = vab.getAudio(program, tone);
+			if (device != nullptr && wave.valid()) {
+				// The stream converts from the wave format to whatever the device wants once bound.
+				// Destroying it also unbinds it from the device.
+				stream.reset(SDL_CreateAudioStream(&wave.spec, nullptr), &SDL_DestroyAudioStream);
+				if (stream == nullptr
+					|| !SDL_SetAudioStreamGain(stream.get(), shortToFloatVolume(volume))
+					|| !SDL_BindAudioStream(*device, stream.get())
+					|| !SDL_PutAudioStreamData(stream.get(), wave.data.data(), int(wave.data.size()))
+					|| !SDL_FlushAudioStream(stream.get())) {
+					logger->error("Failed to play program {}, tone {}: {}", program, tone, SDL_GetError());
+					stream.reset();
+				}
+			}
 			return voice;
 		}
 	}
@@ -364,16 +387,7 @@ void Voices::voiceOff(const Voice voice) {
 		return;
 	}
 
-	Sound& sound = sounds.at(voice);
-	if (!IsSoundValid(sound)) {
-		return;
-	}
-
-	if (IsSoundPlaying(sound)) {
-		StopSound(sound);
-	}
-	UnloadSound(sound);
-	memset(&sound, 0, sizeof(Sound));
+	streams.at(voice).reset();
 }
 
 void Voices::allVoicesOff() {
@@ -383,5 +397,7 @@ void Voices::allVoicesOff() {
 }
 
 void Voices::setVolume(const short volume) {
-	SetMasterVolume(shortToFloatVolume(volume));
+	if (device != nullptr) {
+		SDL_SetAudioDeviceGain(*device, shortToFloatVolume(volume));
+	}
 }

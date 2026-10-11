@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "qsincos.h"
-#include <raylib.h>
+#include <SDL3/SDL.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <map>
@@ -20,11 +20,14 @@
 // Logs //
 
 static std::shared_ptr<spdlog::sinks::sink> consoleSink;
-static std::shared_ptr<spdlog::logger> raylibLog;
+static std::shared_ptr<spdlog::logger> sdlLog;
 static std::shared_ptr<spdlog::logger> timLog;
 static std::shared_ptr<spdlog::logger> vabLog;
 static std::shared_ptr<spdlog::logger> gameLog;
 
+// Created by initialize() once SDL is up, destroyed by shutdown() before SDL goes down
+std::unique_ptr<TimLoader> timLoader;
+std::unique_ptr<VabLoader> vabLoader;
 std::unique_ptr<Voices> voices;
 
 // Types //
@@ -209,6 +212,7 @@ void start_sfx(unsigned short);
 void update_sfx(void);
 void update_music(void);
 void initialize(void);
+void shutdown(void);
 void init_tims(void);
 void init_sound(void);
 void init_sprite(const Tim*, GsSPRITE*);
@@ -239,6 +243,9 @@ static struct {
 #define SCREEN_H2 (SCREEN_H>>1)
 #define SCREEN_W4 (SCREEN_W>>2)
 #define SCREEN_H4 (SCREEN_H>>2)
+
+static SDL_Window* window = nullptr;
+static SDL_Renderer* renderer = nullptr;
 
 unsigned long frame = 0;
 
@@ -629,13 +636,31 @@ int main(int argc, char* argv[]) {
 
 	//	printf("Main Loop.\n");
 
-	while (!WindowShouldClose()) {
+	while (true) {
+		SDL_PumpEvents();
+
+		// The window is closed with its close button or the Escape key
+		bool should_close = false;
+
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			if (event.type == SDL_EVENT_QUIT) {
+				should_close = true;
+			}
+			else if (event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_SCANCODE_ESCAPE) {
+				should_close = true;
+			}
+		}
+
+		if (should_close) {
+			break;
+		}
+
 		fetch_input();
 
 		read_pads();
 		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
-			voices->allVoicesOff();
-			return(0);
+			break;
 		}
 		process_pads();
 		if (pad[0].pulse == (PAD_L1 | PAD_R1))
@@ -650,29 +675,18 @@ int main(int argc, char* argv[]) {
 
 		gameLog->trace("FRAME: {}", frame);
 
-		Camera2D camera;
-		memset(&camera, 0, sizeof(Camera2D));
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+		SDL_RenderClear(renderer);
 
-		const float actual_height = GetScreenHeight();
-		const float factor = actual_height / float(SCREEN_H);
-		const float actual_width = factor * float(SCREEN_W);
-
-		camera.offset.x = (GetScreenWidth() - actual_width) / 2;
-		camera.zoom = float(GetScreenHeight()) / float(SCREEN_H);
-
-		BeginDrawing();
-		ClearBackground(BLACK);
-
-		BeginScissorMode(camera.offset.x, 0, actual_width, actual_height);
-		BeginMode2D(camera);
 		flush_sprites();
-		EndMode2D();
-		EndScissorMode();
 
-		EndDrawing();
+		SDL_RenderPresent(renderer);
 
 		frame++;
 	}
+
+	shutdown();
+	return(0);
 }
 
 
@@ -2694,44 +2708,50 @@ void update_music(void) {
 	}
 }
 
-static void traceLogCallback(int logLevel, const char* text, va_list args) {
-	static std::array<char, 4096> buffer;
-	vsnprintf(buffer.data(), buffer.size(), text, args);
-
-	const std::array<spdlog::level::level_enum, 8> levels{ spdlog::level::trace, spdlog::level::trace, spdlog::level::debug, spdlog::level::info, spdlog::level::warn, spdlog::level::err, spdlog::level::critical, spdlog::level::off };
-	const spdlog::level::level_enum level = levels.at(logLevel);
-	raylibLog->log(level, buffer.data());
+static void sdlLogCallback(void* userdata, int category, SDL_LogPriority priority, const char* message) {
+	const std::array<spdlog::level::level_enum, SDL_LOG_PRIORITY_COUNT> levels{ spdlog::level::off, spdlog::level::trace, spdlog::level::trace, spdlog::level::debug, spdlog::level::info, spdlog::level::warn, spdlog::level::err, spdlog::level::critical };
+	const spdlog::level::level_enum level = levels.at(priority);
+	sdlLog->log(level, "{}", message);
 }
 
 void initialize(void) {
 	consoleSink.reset(new spdlog::sinks::stdout_color_sink_mt);
-	raylibLog.reset(new spdlog::logger("raylib", consoleSink));
+	sdlLog.reset(new spdlog::logger("sdl", consoleSink));
 	timLog.reset(new spdlog::logger("tim", consoleSink));
 	vabLog.reset(new spdlog::logger("vab", consoleSink));
 	gameLog.reset(new spdlog::logger("game", consoleSink));
 
-	raylibLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
+	sdlLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
 	timLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
 	vabLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
 	gameLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
 
-	voices.reset(new Voices);
+	SDL_SetLogOutputFunction(&sdlLogCallback, nullptr);
+	SDL_SetLogPriorities(options.debug ? SDL_LOG_PRIORITY_DEBUG : SDL_LOG_PRIORITY_WARN);
 
-	SetTraceLogCallback(&traceLogCallback);
-	Tim::setLogger(timLog);
-	Vab::setLogger(vabLog);
-	Vab::setHdFolder(options.hd);
-
-	if (!options.exportTims.empty()) {
-		Tim::enableTimExport(options.exportTims);
-	}
-	if (!options.importTims.empty()) {
-		Tim::enableTimImport(options.importTims);
+	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+		gameLog->critical("Failed to initialize SDL: {}", SDL_GetError());
+		exit(1);
 	}
 
-	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-	InitWindow(SCREEN_W, SCREEN_H, "Superbub");
-	SetTargetFPS(60);
+	if (!SDL_CreateWindowAndRenderer("Superbub", SCREEN_W, SCREEN_H, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+		gameLog->critical("Failed to create window: {}", SDL_GetError());
+		exit(1);
+	}
+
+	// Scale the PSX screen to the window keeping its aspect ratio, and keep sprites from spilling into the borders
+	const SDL_Rect screen_rect{ 0, 0, SCREEN_W, SCREEN_H };
+	SDL_SetRenderLogicalPresentation(renderer, SCREEN_W, SCREEN_H, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	SDL_SetRenderClipRect(renderer, &screen_rect);
+
+	// The game logic is locked to the frame rate
+	if (!SDL_SetRenderVSync(renderer, 1)) {
+		gameLog->warn("Failed to enable vsync: {}", SDL_GetError());
+	}
+
+	timLoader.reset(new TimLoader(renderer, timLog, options.exportTims, options.importTims));
+	vabLoader.reset(new VabLoader(vabLog, options.hd));
+	voices.reset(new Voices(vabLog));
 
 	get_pad_buffers(&pad[0].buffer, &pad[1].buffer);
 
@@ -2742,10 +2762,23 @@ void initialize(void) {
 	init_sound();
 }
 
+void shutdown(void) {
+	voices.reset();
+	vabLoader.reset();
+	timLoader.reset();
+
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	renderer = nullptr;
+	window = nullptr;
+
+	SDL_Quit();
+}
+
 void init_tims(void) {
 	unsigned short i;
 
-	font_tim = Tim::loadWithMorphedCluts("FONT01.TIM", {
+	font_tim = timLoader->loadWithMorphedCluts("FONT01.TIM", {
 	ClutMorph{128, 0, 0, 128, 0, 0, 128, 0, 0},
 	ClutMorph{128, 0, 0, 64, 0, 0, 96, 0, 0},
 	ClutMorph{ 64, 0, 0, 128, 0, 0, 96, 0, 0},
@@ -2755,7 +2788,7 @@ void init_tims(void) {
 	font_spt.w = 8;
 	font_spt.h = 16;
 
-	bigfont_tim = Tim::loadWithMorphedCluts("FONT02.TIM", {
+	bigfont_tim = timLoader->loadWithMorphedCluts("FONT02.TIM", {
 	ClutMorph{ 128, 0, 0, 64, 0, 0, 0, 0, 0 },
 		ClutMorph{ 128, 0, 0, 128, 0, 0, 0, 0, 0 },
 		ClutMorph{ 64, 0, 0, 128, 0, 0, 0, 0, 0 },
@@ -2774,7 +2807,7 @@ void init_tims(void) {
 	bigfont_spt.w = 16;
 	bigfont_spt.h = 24;
 
-	title_tim = Tim::loadWithMorphedCluts("TITLE02.TIM", {
+	title_tim = timLoader->loadWithMorphedCluts("TITLE02.TIM", {
 	ClutMorph{ 128, 0, 0, 112, 0, 0, 96, 0, 0},
 	ClutMorph{ 96, 0, 0, 112, 0, 0, 128, 0, 0},
 	ClutMorph{ 112, 0, 0, 96, 0, 0, 128, 0, 0}, }, false);
@@ -2783,7 +2816,7 @@ void init_tims(void) {
 	title_spt.w = 42;
 	title_spt.h = 1;
 
-	screen_tim[0] = Tim::load("SCREEN2A.TIM", false);
+	screen_tim[0] = timLoader->load("SCREEN2A.TIM", false);
 	for (i = 0; i < 3; i++)
 		init_sprite(&screen_tim[0], &screen_spt[i]);
 	screen_spt[0].x = 0;
@@ -2795,7 +2828,7 @@ void init_tims(void) {
 	screen_spt[2].x = 352;
 	screen_spt[2].w = 32;
 	screen_spt[2].u = 96;
-	screen_tim[1] = Tim::load("SCREEN2B.TIM", false);
+	screen_tim[1] = timLoader->load("SCREEN2B.TIM", false);
 	for (i = 3; i < 7; i++)
 		init_sprite(&screen_tim[1], &screen_spt[i]);
 	screen_spt[5].attribute |= 0x60000000;
@@ -2811,11 +2844,11 @@ void init_tims(void) {
 	screen_spt[5].v = 32;
 	screen_spt[6].v = 96;
 
-	bg_tim = Tim::load("BG04.TIM", false);
+	bg_tim = timLoader->load("BG04.TIM", false);
 	init_sprite(&bg_tim, &bg_spt);
 
 	const std::string choice_pic = options.psmCharacters ? "CHOICE01.TIM" : "IMONST02.TIM";
-	monsticon_tim = Tim::loadWithMorphedCluts(choice_pic, {
+	monsticon_tim = timLoader->loadWithMorphedCluts(choice_pic, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
@@ -2834,22 +2867,22 @@ void init_tims(void) {
 		monster_pic3 = "SPOOK01.TIM";
 	}
 
-	monster_tim[0] = Tim::loadWithMorphedCluts(monster_pic0, {
+	monster_tim[0] = timLoader->loadWithMorphedCluts(monster_pic0, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
-	monster_tim[1] = Tim::loadWithMorphedCluts(monster_pic1, {
+	monster_tim[1] = timLoader->loadWithMorphedCluts(monster_pic1, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
-	monster_tim[2] = Tim::loadWithMorphedCluts(monster_pic2, {
+	monster_tim[2] = timLoader->loadWithMorphedCluts(monster_pic2, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
 
-	monster_tim[3] = Tim::loadWithMorphedCluts(monster_pic3, {
+	monster_tim[3] = timLoader->loadWithMorphedCluts(monster_pic3, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
 	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
@@ -2859,7 +2892,7 @@ void init_tims(void) {
 		monster_spt[i].w = 32;
 	}
 
-	bubble_tim[0] = Tim::loadWithMorphedCluts("BUBBLE08.TIM", {
+	bubble_tim[0] = timLoader->loadWithMorphedCluts("BUBBLE08.TIM", {
 	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
 		ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0 }, // yellow
 		ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0 }, // blue
@@ -2867,7 +2900,7 @@ void init_tims(void) {
 		ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0 },
 		}, false); // magenta
 
-	bubble_tim[1] = Tim::loadWithMorphedCluts("FLAME04.TIM", {
+	bubble_tim[1] = timLoader->loadWithMorphedCluts("FLAME04.TIM", {
 	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
 		ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0 }, // yellow
 		ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0 }, // blue
@@ -2875,7 +2908,7 @@ void init_tims(void) {
 		ClutMorph{ 112, 16, 0, 0, 128, 0, 128, 0, 0 },
 		}, false); // magenta
 
-	bubble_tim[2] = Tim::load("MAGIC01.TIM", true);
+	bubble_tim[2] = timLoader->load("MAGIC01.TIM", true);
 	for (i = 0; i < 2; i++) {
 		init_sprite(&bubble_tim[i], &bubble_spt[i]);
 		bubble_spt[i].attribute |= 0x40000000;
@@ -2885,7 +2918,7 @@ void init_tims(void) {
 	bubble_spt[2].attribute |= 0x50000000;
 	bubble_spt[2].w = 16;
 
-	eater_tim = Tim::loadWithMorphedCluts("BFLAME02.TIM", {
+	eater_tim = timLoader->loadWithMorphedCluts("BFLAME02.TIM", {
 	ClutMorph{ 120, 8, 0, 0, 128, 0, 0, 128, 0 }, // red
 	ClutMorph{ 112, 16, 0, 96, 32, 0, 0, 128, 0}, // yellow
 	ClutMorph{ 0, 128, 0, 64, 64, 0, 128, 0, 0}, // blue
@@ -2895,22 +2928,21 @@ void init_tims(void) {
 	eater_spt.attribute |= 0x50000000;
 	eater_spt.w = 32;
 
-	timebar_tim = Tim::load("TBAR03.TIM", true);
+	timebar_tim = timLoader->load("TBAR03.TIM", true);
 	init_sprite(&timebar_tim, &timebar_spt);
 	timebar_spt.y = 235;
 	timebar_spt.h = 4;
 
-	wincup_tim = Tim::load("CUP01.TIM", false);
+	wincup_tim = timLoader->load("CUP01.TIM", false);
 	init_sprite(&wincup_tim, &wincup_spt);
 	wincup_spt.attribute |= 0x40000000;
 
-	bubblefx_tim = Tim::load("SMLBUB02.TIM", true);
+	bubblefx_tim = timLoader->load("SMLBUB02.TIM", true);
 	init_sprite(&bubblefx_tim, &bubblefx_spt);
 	bubblefx_spt.attribute |= 0x50000000;
 }
 
 void init_sound(void) {
-	InitAudioDevice();
 	vab[0] = load_vab("FX01.VH");
 	vab[1] = load_vab("MUSIC01.VH");
 	voices->setVolume(127);
@@ -2930,7 +2962,7 @@ void init_sprite(const Tim* tim, GsSPRITE* spt) {
 }
 
 std::unique_ptr<Vab> load_vab(const char* vh_file) {
-	std::unique_ptr<Vab> vab(new Vab(Vab::load(vh_file)));
+	std::unique_ptr<Vab> vab(new Vab(vabLoader->load(vh_file)));
 	return vab;
 }
 
@@ -2944,19 +2976,19 @@ void flush_sprites() {
 	constexpr uint32_t brigthness_flag = 1u << 6;
 
 	for (auto sprite = sprites.rbegin(); sprite != sprites.rend(); ++sprite) {
-		Rectangle source;
-		Rectangle dest;
-		Color tint = WHITE;
+		SDL_FRect source;
+		SDL_FRect dest;
+		SDL_Color tint{ 255, 255, 255, 255 };
 
 		source.x = sprite->tim->palettedBounds.at(sprite->palette).x + sprite->u;
 		source.y = sprite->tim->palettedBounds.at(sprite->palette).y + sprite->v;
-		source.width = sprite->w;
-		source.height = sprite->h;
+		source.w = sprite->w;
+		source.h = sprite->h;
 
 		dest.x = sprite->x;
 		dest.y = sprite->y;
-		dest.width = sprite->w;
-		dest.height = sprite->h;
+		dest.w = sprite->w;
+		dest.h = sprite->h;
 
 		if ((sprite->attribute & brigthness_flag) == 0) {
 			const float r_fact = float(sprite->r) / 128.0f;
@@ -2968,7 +3000,8 @@ void flush_sprites() {
 			tint.b = unsigned char(std::clamp(int(b_fact * 255), 0, 255));
 		}
 
-		DrawTexturePro(sprite->tim->texture, source, dest, Vector2{ 0,0 }, 0, tint);
+		SDL_SetTextureColorMod(sprite->tim->texture, tint.r, tint.g, tint.b);
+		SDL_RenderTexture(renderer, sprite->tim->texture, &source, &dest);
 	}
 
 	sprites.clear();
@@ -2982,21 +3015,21 @@ void get_pad_buffers(unsigned char** pad1, unsigned char** pad2) {
 }
 
 void fetch_input() {
-	const std::map<int, uint16_t> player_1_keys{
-		{KEY_R, PAD_L2 },
-		{KEY_T, PAD_R2 },
-		{KEY_F, PAD_L1 },
-		{KEY_G, PAD_R1 },
-		{KEY_W, PAD_TRIANGLE },
-		{KEY_D, PAD_CIRCLE },
-		{KEY_S, PAD_X },
-		{KEY_A, PAD_SQUARE },
-		{KEY_SPACE, PAD_SELECT },
-		{KEY_ENTER, PAD_START },
-		{KEY_UP, PAD_UP },
-		{KEY_RIGHT, PAD_RIGHT },
-		{KEY_DOWN, PAD_DOWN },
-		{KEY_LEFT, PAD_LEFT },
+	const std::map<SDL_Scancode, uint16_t> player_1_keys{
+		{SDL_SCANCODE_R, PAD_L2 },
+		{SDL_SCANCODE_T, PAD_R2 },
+		{SDL_SCANCODE_F, PAD_L1 },
+		{SDL_SCANCODE_G, PAD_R1 },
+		{SDL_SCANCODE_W, PAD_TRIANGLE },
+		{SDL_SCANCODE_D, PAD_CIRCLE },
+		{SDL_SCANCODE_S, PAD_X },
+		{SDL_SCANCODE_A, PAD_SQUARE },
+		{SDL_SCANCODE_SPACE, PAD_SELECT },
+		{SDL_SCANCODE_RETURN, PAD_START },
+		{SDL_SCANCODE_UP, PAD_UP },
+		{SDL_SCANCODE_RIGHT, PAD_RIGHT },
+		{SDL_SCANCODE_DOWN, PAD_DOWN },
+		{SDL_SCANCODE_LEFT, PAD_LEFT },
 	};
 
 	constexpr uint32_t with_controller = 0x00;
@@ -3007,9 +3040,11 @@ void fetch_input() {
 	pad_buffer_1 = with_controller | terminal_standard_pad | data_size_2bytes;
 
 	{
+		const bool* key_states = SDL_GetKeyboardState(nullptr);
+
 		uint16_t payload = 0;
 		for (const auto& entry : player_1_keys) {
-			if (IsKeyDown(entry.first)) {
+			if (key_states[entry.first]) {
 				payload |= entry.second;
 			}
 		}

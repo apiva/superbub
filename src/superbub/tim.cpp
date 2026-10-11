@@ -45,7 +45,7 @@ static bool hasClut(const TimHeader& header) {
 	return bool((header.flags >> 3) & 0b1);
 }
 
-static Color getColorFromClut(const Clut& clut, const int index, const bool special_trasparency_bit) {
+static SDL_Color getColorFromClut(const Clut& clut, const int index, const bool special_trasparency_bit) {
 	const uint16_t value = clut.at(index);
 	const unsigned int r = (value >> 0) & 0b11111;
 	const unsigned int g = (value >> 5) & 0b11111;
@@ -53,7 +53,7 @@ static Color getColorFromClut(const Clut& clut, const int index, const bool spec
 	const unsigned int t = (value >> 15) & 0b1;
 	const bool is_black = (r == 0 && g == 0 && b == 0);
 
-	Color color;
+	SDL_Color color;
 	color.r = r << 3;
 	color.g = g << 3;
 	color.b = b << 3;
@@ -67,7 +67,7 @@ static Color getColorFromClut(const Clut& clut, const int index, const bool spec
 	return color;
 }
 
-static int colorToInt(const Color color) {
+static int colorToInt(const SDL_Color color) {
 	return (((int)color.a << 24) | ((int)color.b << 16) | ((int)color.g << 8) | (int)color.r);
 }
 
@@ -96,50 +96,21 @@ static Clut morphClut(const Clut& clut, const ClutMorph& morph) {
 	return result;
 }
 
-std::shared_ptr<spdlog::logger> Tim::logger;
-std::filesystem::path Tim::exportPath;
-std::filesystem::path Tim::importPath;
-
-Tim::Tim() {
-	memset(&texture, 0, sizeof(Texture));
+TimLoader::TimLoader(SDL_Renderer* renderer, std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& exportPath, const std::filesystem::path& importPath)
+	: renderer(renderer), logger(logger), exportPath(exportPath), importPath(importPath) {
 }
 
-Tim::~Tim() {
-	UnloadTexture(texture);
-	memset(&texture, 0, sizeof(Texture));
-}
-
-Tim::Tim(Tim&& other) : logicalWidth(other.logicalWidth), logicalHeight(other.logicalHeight), texture(other.texture), palettedBounds(std::move(other.palettedBounds)) {
-	other.logicalWidth = 0;
-	other.logicalHeight = 0;
-	memset(&other.texture, 0, sizeof(Texture));
-}
-
-Tim& Tim::operator=(Tim&& other) {
-	if (this != &other) {
-		logicalWidth = other.logicalWidth;
-		other.logicalWidth = 0;
-
-		logicalHeight = other.logicalHeight;
-		other.logicalHeight = 0;
-
-		UnloadTexture(texture);
-		memset(&texture, 0, sizeof(Texture));
-
-		texture = other.texture;
-		memset(&other.texture, 0, sizeof(Texture));
-
-		palettedBounds = std::move(other.palettedBounds);
+TimLoader::~TimLoader() {
+	for (SDL_Texture* texture : textures) {
+		SDL_DestroyTexture(texture);
 	}
-
-	return *this;
 }
 
-Tim Tim::load(const std::filesystem::path& path, const bool special_trasparency_bit) {
-	return Tim::loadWithMorphedCluts(path, {}, special_trasparency_bit);
+Tim TimLoader::load(const std::filesystem::path& path, const bool special_trasparency_bit) {
+	return loadWithMorphedCluts(path, {}, special_trasparency_bit);
 }
 
-Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts, const bool special_trasparency_bit) {
+Tim TimLoader::loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts, const bool special_trasparency_bit) {
 	TimFile timfile;
 
 	{
@@ -201,68 +172,68 @@ Tim Tim::loadWithMorphedCluts(const std::filesystem::path& path, const std::init
 		tim.logicalHeight = timfile.imageHeader.height;
 		logger->info("Color mode {}, image width = {}, image height = {}, palettes = {}", color_mode_caption, tim.logicalWidth, tim.logicalHeight, all_cluts.size());
 
-		Image complete_image;
-		memset(&complete_image, 0, sizeof(Image));
-		complete_image.mipmaps = 1;
-		complete_image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-		complete_image.width = tim.logicalWidth;
-		complete_image.height = tim.logicalHeight * all_cluts.size();
-		complete_image.data = RL_MALLOC(sizeof(uint32_t) * complete_image.width * complete_image.height);
-		memset(complete_image.data, 0, sizeof(uint32_t) * complete_image.width * complete_image.height);
+		// One copy of the image per palette, stacked vertically. Transparent pixels are left fully zeroed.
+		const int complete_width = tim.logicalWidth;
+		const int complete_height = tim.logicalHeight * int(all_cluts.size());
+		std::vector<int> complete_image(size_t(complete_width) * complete_height, 0);
 
 		for (int clut_index = 0; clut_index < all_cluts.size(); ++clut_index) {
 			const Clut& clut = all_cluts.at(clut_index);
 
-			Image image;
-			image.mipmaps = 1;
-			image.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-			image.width = tim.logicalWidth;
-			image.height = tim.logicalHeight;
-			image.data = RL_MALLOC(sizeof(uint32_t) * image.width * image.height);
-			memset(image.data, 0, sizeof(uint32_t) * image.width * image.height);
+			int* pixel = complete_image.data() + size_t(tim.logicalWidth) * tim.logicalHeight * clut_index;
 
 			if (color_mode == ColorMode::Indices4bits) {
-				int* pixel = reinterpret_cast<int*>(image.data);
 				for (const uint16_t value : timfile.imageData) {
 					for (const unsigned int offset : {0, 4, 8, 12}) {
 						const int index = (value >> offset) & 0b1111;
-						const Color color = getColorFromClut(clut, index, special_trasparency_bit);
-						*pixel = colorToInt(color);
+						const SDL_Color color = getColorFromClut(clut, index, special_trasparency_bit);
+						*pixel = color.a ? colorToInt(color) : 0;
 						++pixel;
 					}
 				}
 			}
 			else if (color_mode == ColorMode::Indices8bits) {
-				int* pixel = reinterpret_cast<int*>(image.data);
 				for (const uint16_t value : timfile.imageData) {
 					for (const unsigned int offset : {0, 8}) {
 						const int index = (value >> offset) & 0b11111111;
-						const Color color = getColorFromClut(clut, index, special_trasparency_bit);
-						*pixel = colorToInt(color);
+						const SDL_Color color = getColorFromClut(clut, index, special_trasparency_bit);
+						*pixel = color.a ? colorToInt(color) : 0;
 						++pixel;
 					}
 				}
 			}
 
-			const Rectangle source_rect{ 0, 0, float(image.width), float(image.height) };
-			const Rectangle dest_rect{ 0, float(image.height * clut_index), float(image.width), float(image.height) };
-			ImageDraw(&complete_image, image, source_rect, dest_rect, WHITE);
-			tim.palettedBounds.push_back(dest_rect);
+			tim.palettedBounds.push_back(SDL_FRect{ 0, float(tim.logicalHeight * clut_index), float(tim.logicalWidth), float(tim.logicalHeight) });
 		}
 
-		tim.texture = LoadTextureFromImage(complete_image);
+		// colorToInt() packs pixels as 0xAABBGGRR
+		const std::unique_ptr<SDL_Surface, void(*)(SDL_Surface*)> surface(SDL_CreateSurfaceFrom(complete_width, complete_height, SDL_PIXELFORMAT_ABGR8888, complete_image.data(), complete_width * int(sizeof(int))), &SDL_DestroySurface);
+		if (surface == nullptr) {
+			logger->error("Failed to create surface for TIM {}: {}", path.string(), SDL_GetError());
+			return Tim{};
+		}
+
+		SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface.get());
+		if (texture == nullptr) {
+			logger->error("Failed to create texture for TIM {}: {}", path.string(), SDL_GetError());
+		}
+		else {
+			SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+			SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+
+			textures.push_back(texture);
+			tim.texture = texture;
+		}
 
 		if (!exportPath.empty()) {
 			const std::filesystem::path export_filename = exportPath / std::filesystem::path(path).replace_extension(".png");
 			logger->info("Exporting TIM to path {}", export_filename.string());
 
 			std::filesystem::create_directories(export_filename.parent_path());
-			if (!ExportImage(complete_image, export_filename.string().c_str())) {
-				logger->error("Failed to export TIM to path {}", export_filename.string());
+			if (!SDL_SavePNG(surface.get(), export_filename.string().c_str())) {
+				logger->error("Failed to export TIM to path {}: {}", export_filename.string(), SDL_GetError());
 			}
 		}
-
-		UnloadImage(complete_image);
 
 		return tim;
 	}

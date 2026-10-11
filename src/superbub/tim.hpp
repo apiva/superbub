@@ -1,5 +1,5 @@
 #pragma once
-#include <raylib.h>
+#include <SDL3/SDL.h>
 #include <spdlog/logger.h>
 #include <filesystem>
 
@@ -17,39 +17,34 @@ struct ClutMorph {
 
 class Tim {
 public:
-	static std::shared_ptr<spdlog::logger> logger;
-	static std::filesystem::path exportPath;
-	static std::filesystem::path importPath;
-
-	static void setLogger(std::shared_ptr<spdlog::logger> _logger) {
-		logger = _logger;
-	}
-
-	static void enableTimExport(const std::filesystem::path& path) {
-		exportPath = path;
-	}
-
-	static void enableTimImport(const std::filesystem::path& path) {
-		importPath = path;
-	}
-
-	static Tim load(const std::filesystem::path& path, const bool special_trasparency_bit);
-	static Tim loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts, const bool special_trasparency_bit);
-
-	Tim();
-	~Tim();
-
-	Tim(const Tim&) = delete;
-	Tim(Tim&& other);
-	Tim& operator=(const Tim&) = delete;
-	Tim& operator=(Tim&& other);
-
 	int logicalWidth = 0;
 	int logicalHeight = 0;
-	Texture texture;
-	std::vector<Rectangle> palettedBounds;
+	// Owned by the TimLoader that loaded this TIM, and valid only as long as that loader exists
+	SDL_Texture* texture = nullptr;
+	std::vector<SDL_FRect> palettedBounds;
 
 	bool valid() const {
-		return texture.id != 0;
+		return texture != nullptr;
 	}
+};
+
+// Loads TIMs as textures of the given renderer. The textures are destroyed together with the loader,
+// so it has to be destroyed before the renderer.
+class TimLoader {
+public:
+	TimLoader(SDL_Renderer* renderer, std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& exportPath, const std::filesystem::path& importPath);
+	~TimLoader();
+
+	TimLoader(const TimLoader&) = delete;
+	TimLoader& operator=(const TimLoader&) = delete;
+
+	Tim load(const std::filesystem::path& path, const bool special_trasparency_bit);
+	Tim loadWithMorphedCluts(const std::filesystem::path& path, const std::initializer_list<ClutMorph>& morphed_cluts, const bool special_trasparency_bit);
+
+private:
+	SDL_Renderer* renderer;
+	std::shared_ptr<spdlog::logger> logger;
+	std::filesystem::path exportPath;
+	std::filesystem::path importPath;
+	std::vector<SDL_Texture*> textures;
 };
