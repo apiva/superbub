@@ -7,3 +7,9 @@
 [submodule "ext/gflags"]
 	path = ext/gflags
 	url = https://github.com/gflags/gflags.git
+[submodule "ext/SDL"]
+	path = ext/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "ext/CLI11"]
+	path = ext/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
