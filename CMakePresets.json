@@ -11,20 +11,14 @@
       "displayName": "Windows (Dev)",
       "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/temp/build/${presetName}",
-      "installDir": "${sourceDir}/temp/install/${presetName}",
-      "cacheVariables": {
-        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
-      }
+      "installDir": "${sourceDir}/temp/install/${presetName}"
     },
     {
       "name": "windows-release",
       "displayName": "Windows (Release)",
       "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/temp/build/${presetName}",
-      "installDir": "${sourceDir}/temp/install/${presetName}",
-      "cacheVariables": {
-        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
-      }
+      "installDir": "${sourceDir}/temp/install/${presetName}"
     }
   ],
   "buildPresets": [
