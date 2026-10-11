@@ -1,0 +1,44 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 2,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-dev",
+      "displayName": "Windows (Dev)",
+      "generator": "Visual Studio 18 2026",
+      "binaryDir": "${sourceDir}/temp/build/${presetName}",
+      "installDir": "${sourceDir}/temp/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows (Release)",
+      "generator": "Visual Studio 18 2026",
+      "binaryDir": "${sourceDir}/temp/build/${presetName}",
+      "installDir": "${sourceDir}/temp/install/${presetName}",
+      "cacheVariables": {
+        "CMAKE_POLICY_VERSION_MINIMUM": "3.5"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-dev",
+      "displayName": "Windows (Dev)",
+      "configurePreset": "windows-dev",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows (Release)",
+      "configurePreset": "windows-release",
+      "configuration": "Release"
+    }
+  ]
+}
