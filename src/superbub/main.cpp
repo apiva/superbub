@@ -2847,11 +2847,22 @@ void init_tims(void) {
 	bg_tim = timLoader->load("BG04.TIM", false);
 	init_sprite(&bg_tim, &bg_spt);
 
+	// The original monsters get their colors by blending the channels of the TIM's palette.
+	// The PSM characters are already drawn in their own colors: player 1 uses them as they are,
+	// player 2 gets green and blue swapped (values taken from the SB_opm executable).
+	static const std::initializer_list<ClutMorph> original_monster_cluts{
+		ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
+		ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
+		ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64},
+	};
+	static const std::initializer_list<ClutMorph> psm_monster_cluts{
+		ClutMorph{ 128, 0, 0, 0, 128, 0, 0, 0, 128},
+		ClutMorph{ 128, 0, 0, 0, 0, 128, 0, 128, 0},
+	};
+	const std::initializer_list<ClutMorph>& monster_cluts = options.psmCharacters ? psm_monster_cluts : original_monster_cluts;
+
 	const std::string choice_pic = options.psmCharacters ? "CHOICE01.TIM" : "IMONST02.TIM";
-	monsticon_tim = timLoader->loadWithMorphedCluts(choice_pic, {
-	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
-	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
+	monsticon_tim = timLoader->loadWithMorphedCluts(choice_pic, monster_cluts, false);
 	init_sprite(&monsticon_tim, &monsticon_spt);
 	monsticon_spt.w = 128;
 	monsticon_spt.h = 128;
@@ -2867,25 +2878,13 @@ void init_tims(void) {
 		monster_pic3 = "SPOOK01.TIM";
 	}
 
-	monster_tim[0] = timLoader->loadWithMorphedCluts(monster_pic0, {
-	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
-	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
+	monster_tim[0] = timLoader->loadWithMorphedCluts(monster_pic0, monster_cluts, false);
 
-	monster_tim[1] = timLoader->loadWithMorphedCluts(monster_pic1, {
-	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
-	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
+	monster_tim[1] = timLoader->loadWithMorphedCluts(monster_pic1, monster_cluts, false);
 
-	monster_tim[2] = timLoader->loadWithMorphedCluts(monster_pic2, {
-	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
-	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
+	monster_tim[2] = timLoader->loadWithMorphedCluts(monster_pic2, monster_cluts, false);
 
-	monster_tim[3] = timLoader->loadWithMorphedCluts(monster_pic3, {
-	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
-	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
-	ClutMorph{ 64, 0, 64, 64, 64, 0, 0, 64, 64}, }, false);
+	monster_tim[3] = timLoader->loadWithMorphedCluts(monster_pic3, monster_cluts, false);
 
 	for (i = 0; i < 4; i++) {
 		init_sprite(&monster_tim[i], &monster_spt[i]);
