@@ -219,6 +219,7 @@ void init_sprite(const Tim*, GsSPRITE*);
 std::unique_ptr<Vab> load_vab(const char*);
 
 void draw_sprite(const GsSPRITE*);
+void clear_sprites();
 void flush_sprites();
 
 void get_pad_buffers(unsigned char** pad1, unsigned char** pad2);
@@ -243,6 +244,11 @@ static struct {
 #define SCREEN_H2 (SCREEN_H>>1)
 #define SCREEN_W4 (SCREEN_W>>2)
 #define SCREEN_H4 (SCREEN_H>>2)
+
+// The game was made for PAL consoles: everything, music included, is timed on 50 frames per second
+#define LOGIC_FPS 50
+// How many logic frames can be run in a row to catch up, after the game was stalled
+#define MAX_PENDING_FRAMES 4
 
 static SDL_Window* window = nullptr;
 static SDL_Renderer* renderer = nullptr;
@@ -636,7 +642,13 @@ int main(int argc, char* argv[]) {
 
 	//	printf("Main Loop.\n");
 
-	while (true) {
+	// The logic runs at its own fixed rate, whatever the refresh rate of the display is
+	const Uint64 frame_time = SDL_NS_PER_SECOND / LOGIC_FPS;
+	Uint64 previous_time = SDL_GetTicksNS();
+	Uint64 pending_time = frame_time;
+	bool running = true;
+
+	while (running) {
 		SDL_PumpEvents();
 
 		// The window is closed with its close button or the Escape key
@@ -656,33 +668,46 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 
-		fetch_input();
+		const Uint64 current_time = SDL_GetTicksNS();
+		pending_time = std::min(pending_time + (current_time - previous_time), frame_time * MAX_PENDING_FRAMES);
+		previous_time = current_time;
 
-		read_pads();
-		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
-			break;
+		while (pending_time >= frame_time) {
+			pending_time -= frame_time;
+
+			// Every logic frame draws the whole screen again
+			clear_sprites();
+
+			fetch_input();
+
+			read_pads();
+			if (pad[0].keys == (PAD_SELECT | PAD_START)) {
+				running = false;
+				break;
+			}
+			process_pads();
+			if (pad[0].pulse == (PAD_L1 | PAD_R1))
+				options.debug = !options.debug;
+
+			update_music();
+			update_sfx();
+
+			update_anitext();
+
+			(*game.mode_func)();
+
+			gameLog->trace("FRAME: {}", frame);
+
+			frame++;
 		}
-		process_pads();
-		if (pad[0].pulse == (PAD_L1 | PAD_R1))
-			options.debug = !options.debug;
 
-		update_music();
-		update_sfx();
-
-		update_anitext();
-
-		(*game.mode_func)();
-
-		gameLog->trace("FRAME: {}", frame);
-
+		// Shows the last logic frame: again, if no new one was due yet
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 		SDL_RenderClear(renderer);
 
 		flush_sprites();
 
 		SDL_RenderPresent(renderer);
-
-		frame++;
 	}
 
 	shutdown();
@@ -2744,7 +2769,6 @@ void initialize(void) {
 	SDL_SetRenderLogicalPresentation(renderer, SCREEN_W, SCREEN_H, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 	SDL_SetRenderClipRect(renderer, &screen_rect);
 
-	// The game logic is locked to the frame rate
 	if (!SDL_SetRenderVSync(renderer, 1)) {
 		gameLog->warn("Failed to enable vsync: {}", SDL_GetError());
 	}
@@ -2971,6 +2995,10 @@ void draw_sprite(const GsSPRITE* sprite) {
 	sprites.emplace_back(*sprite);
 }
 
+void clear_sprites() {
+	sprites.clear();
+}
+
 void flush_sprites() {
 	constexpr uint32_t brigthness_flag = 1u << 6;
 
@@ -3002,8 +3030,6 @@ void flush_sprites() {
 		SDL_SetTextureColorMod(sprite->tim->texture, tint.r, tint.g, tint.b);
 		SDL_RenderTexture(renderer, sprite->tim->texture, &source, &dest);
 	}
-
-	sprites.clear();
 }
 
 uint32_t pad_buffer_1, pad_buffer_2;
