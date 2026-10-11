@@ -13,7 +13,7 @@
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <map>
-#include <gflags/gflags.h>
+#include <CLI/CLI.hpp>
 #include <tim.hpp>
 #include <vab.hpp>
 
@@ -220,11 +220,15 @@ void flush_sprites();
 void get_pad_buffers(unsigned char** pad1, unsigned char** pad2);
 void fetch_input();
 
-DEFINE_bool(debug, false, "Enable debug");
-DEFINE_bool(psm_characters, false, "Use PSM character images");
-DEFINE_string(export_tims, "", "Export converted TIMs to specified folder");
-DEFINE_string(import_tims, "", "Use the images in the specified folder to replace the TIMs");
-DEFINE_string(hd, "", "Folder to export / import HD assets");
+// Command line options //
+
+static struct {
+	bool debug = false;
+	bool psmCharacters = false;
+	std::string exportTims;
+	std::string importTims;
+	std::string hd;
+} options;
 
 // Screen & GPU Stuff //
 
@@ -609,7 +613,13 @@ unsigned short next_bubblefx = 0;
 // Functions //
 
 int main(int argc, char* argv[]) {
-	gflags::ParseCommandLineFlags(&argc, &argv, false);
+	CLI::App app{ "Super Bub Contest" };
+	app.add_flag("--debug", options.debug, "Enable debug");
+	app.add_flag("--psm-characters", options.psmCharacters, "Use PSM character images");
+	app.add_option("--export-tims", options.exportTims, "Export converted TIMs to specified folder");
+	app.add_option("--import-tims", options.importTims, "Use the images in the specified folder to replace the TIMs");
+	app.add_option("--hd", options.hd, "Folder to export / import HD assets");
+	CLI11_PARSE(app, argc, argv);
 
 	initialize();
 
@@ -629,7 +639,7 @@ int main(int argc, char* argv[]) {
 		}
 		process_pads();
 		if (pad[0].pulse == (PAD_L1 | PAD_R1))
-			FLAGS_debug = !FLAGS_debug;
+			options.debug = !options.debug;
 
 		update_music();
 		update_sfx();
@@ -2700,23 +2710,23 @@ void initialize(void) {
 	vabLog.reset(new spdlog::logger("vab", consoleSink));
 	gameLog.reset(new spdlog::logger("game", consoleSink));
 
-	raylibLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
-	timLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
-	vabLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
-	gameLog->set_level(FLAGS_debug ? spdlog::level::debug : spdlog::level::warn);
+	raylibLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
+	timLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
+	vabLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
+	gameLog->set_level(options.debug ? spdlog::level::debug : spdlog::level::warn);
 
 	voices.reset(new Voices);
 
 	SetTraceLogCallback(&traceLogCallback);
 	Tim::setLogger(timLog);
 	Vab::setLogger(vabLog);
-	Vab::setHdFolder(FLAGS_hd);
+	Vab::setHdFolder(options.hd);
 
-	if (!FLAGS_export_tims.empty()) {
-		Tim::enableTimExport(FLAGS_export_tims);
+	if (!options.exportTims.empty()) {
+		Tim::enableTimExport(options.exportTims);
 	}
-	if (!FLAGS_import_tims.empty()) {
-		Tim::enableTimImport(FLAGS_import_tims);
+	if (!options.importTims.empty()) {
+		Tim::enableTimImport(options.importTims);
 	}
 
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
@@ -2804,7 +2814,7 @@ void init_tims(void) {
 	bg_tim = Tim::load("BG04.TIM", false);
 	init_sprite(&bg_tim, &bg_spt);
 
-	const std::string choice_pic = FLAGS_psm_characters ? "CHOICE01.TIM" : "IMONST02.TIM";
+	const std::string choice_pic = options.psmCharacters ? "CHOICE01.TIM" : "IMONST02.TIM";
 	monsticon_tim = Tim::loadWithMorphedCluts(choice_pic, {
 	ClutMorph{ 64, 64, 0, 0, 64, 64, 64, 0, 64},
 	ClutMorph{ 0, 64, 64, 64, 0, 64, 64, 64, 0},
@@ -2817,7 +2827,7 @@ void init_tims(void) {
 	std::string monster_pic1 = "MONST02.TIM";
 	std::string monster_pic2 = "MONST03.TIM";
 	std::string monster_pic3 = "MONST04.TIM";
-	if (FLAGS_psm_characters) {
+	if (options.psmCharacters) {
 		monster_pic0 = "PIG01.TIM";
 		monster_pic1 = "LION01.TIM";
 		monster_pic2 = "FROG01.TIM";
