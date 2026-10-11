@@ -10,6 +10,11 @@ public:
 	struct Wave {
 		SDL_AudioSpec spec{};
 		std::vector<Uint8> data;
+		// The note at which the wave plays at its own sample rate
+		int centerNote = 60;
+		// A looping wave plays from the start, then repeats from loopStart (in bytes) until the voice is turned off
+		bool looping = false;
+		size_t loopStart = 0;
 
 		bool valid() const {
 			return !data.empty();
@@ -52,6 +57,7 @@ public:
 	// Needs the SDL audio subsystem, and has to be destroyed before SDL is shut down
 	Voices(std::shared_ptr<spdlog::logger> logger);
 
+	// The Vab has to outlive the voices playing its sounds
 	Voice voiceOn(const Vab& vab, const int program, const int tone, const int note, const short volume);
 	void voiceOff(const Voice voice);
 	void allVoicesOff();

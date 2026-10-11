@@ -1,5 +1,7 @@
 #include <vab.hpp>
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <vector>
 #include <fstream>
 #include <filesystem>
@@ -86,10 +88,27 @@ static_assert(sizeof(VhProgramAttributes) == 16);
 static_assert(sizeof(VhToneAttributes) == 32);
 static_assert(sizeof(VhWaveOffsets) == 512);
 
+// Flags in the second byte of every 16 bytes ADPCM block
+constexpr int AdpcmLoopEnd = 1 << 0; // Last block: either stop, or jump back to the loop start
+constexpr int AdpcmRepeat = 1 << 1; // On the last block: jump back to the loop start instead of stopping
+constexpr int AdpcmLoopStart = 1 << 2;
+constexpr int AdpcmSamplesPerBlock = 28;
+
+// The SPU plays a waveform at this rate when the requested note is the center note of the tone
+constexpr unsigned int SpuSampleRate = 44100;
+
+struct AdpcmLoop {
+	bool looping = false;
+	size_t startSample = 0;
+	size_t sampleCount = 0;
+};
+
 // https://github.com/ColdSauce/psxsdk/blob/master/tools/vag2wav.c
-static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsigned int samp_freq, std::ostream& wav) {
+static AdpcmLoop adpcmToWav(std::istream& adpcm, const size_t data_size, const unsigned int samp_freq, std::ostream& wav) {
+	AdpcmLoop loop;
+
 	{
-		// Write header chunk	
+		// Write header chunk
 		wav.write("RIFF", 4);
 		// Skip file size field for now
 		wav.write("\0\0\0\0", 4);
@@ -102,17 +121,17 @@ static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsign
 		wav.put(0);
 		wav.put(0);
 		wav.put(0);
-		// Write audio format (1 = PCM)	
+		// Write audio format (1 = PCM)
 		wav.put(1);
 		wav.put(0);
 		// Number of channels (1)
 		wav.put(1);
 		wav.put(0);
 		// Write sample rate
-		wav.put(samp_freq & 0xf);
+		wav.put(samp_freq & 0xff);
 		wav.put((samp_freq >> 8) & 0xff);
-		wav.put(0);
-		wav.put(0);
+		wav.put((samp_freq >> 16) & 0xff);
+		wav.put((samp_freq >> 24) & 0xff);
 		// Write byte rate (SampleRate * NumChannels * BitsPerSample/8)
 		// That would be 44100*1*(16/8), thus 88200.
 		wav.put((samp_freq * 2) & 0xff);
@@ -136,7 +155,7 @@ static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsign
 	{
 		int predict_nr, shift_factor, flags;
 		int i, d, s;
-		double samples[28];
+		double samples[AdpcmSamplesPerBlock];
 		double s_1 = 0, s_2 = 0;
 		const double f[5][2] = { { 0.0, 0.0 },
 						{   60.0 / 64.0,  0.0 },
@@ -146,15 +165,23 @@ static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsign
 
 		size_t offset = 0;
 
-		while (offset < (data_size + 48)) {
+		// Never read past the waveform: the next one starts right after it
+		while (offset < data_size) {
 			predict_nr = adpcm.get();
 			shift_factor = predict_nr & 0xf;
 			predict_nr >>= 4;
 			flags = adpcm.get();
-			if (flags == 7) {
+			// One-shot waveforms are closed by a block that only carries this value
+			if (flags == 7 || !adpcm) {
 				break;
 			}
-			for (i = 0; i < 28; i += 2) {
+			if (predict_nr > 4) {
+				predict_nr = 0;
+			}
+			if (flags & AdpcmLoopStart) {
+				loop.startSample = loop.sampleCount;
+			}
+			for (i = 0; i < AdpcmSamplesPerBlock; i += 2) {
 				d = adpcm.get();
 				s = (d & 0xf) << 12;
 				if (s & 0x8000)
@@ -166,16 +193,22 @@ static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsign
 				samples[i + 1] = (double)(s >> shift_factor);
 			}
 
-			for (i = 0; i < 28; i++) {
+			for (i = 0; i < AdpcmSamplesPerBlock; i++) {
 				samples[i] = samples[i] + s_1 * f[predict_nr][0] + s_2 * f[predict_nr][1];
 				s_2 = s_1;
 				s_1 = samples[i];
-				d = (int)(samples[i] + 0.5);
+				d = std::clamp((int)(samples[i] + 0.5), -32768, 32767);
 				wav.put(d & 0xff);
 				wav.put(d >> 8);
 			}
 
 			offset += 16;
+			loop.sampleCount += AdpcmSamplesPerBlock;
+
+			if (flags & AdpcmLoopEnd) {
+				loop.looping = (flags & AdpcmRepeat) != 0;
+				break;
+			}
 		}
 	}
 
@@ -198,6 +231,8 @@ static void adpcmToWav(std::istream& adpcm, const size_t data_size, const unsign
 		wav.put(((sz - 44) >> 16) & 0xff);
 		wav.put(((sz - 44) >> 24) & 0xff);
 	}
+
+	return loop;
 }
 
 static bool loadWave(SDL_IOStream* io, Vab::Wave& wave) {
@@ -225,7 +260,7 @@ Vab VabLoader::load(const std::filesystem::path& path) {
 	VhFile vh;
 
 	{
-		std::ifstream vh_stream(vh_path);
+		std::ifstream vh_stream(vh_path, std::ios::binary);
 
 		if (vh_stream.rdbuf()->sgetn(reinterpret_cast<char*>(&vh.header), sizeof(VhHeader)) != sizeof(VhHeader)) {
 			return Vab{};
@@ -271,46 +306,51 @@ Vab VabLoader::load(const std::filesystem::path& path) {
 		for (int program = 0; program < vh.header.programCount; ++program) {
 			const VhProgramAttributes& program_attribs = vh.programAttributes.at(program);
 			for (int tone = 0; tone < program_attribs.tones; ++tone) {
+				const VhToneAttributes& tone_attribs = vh.programTones.at(program).toneAttributes.at(tone);
+				const VagInfo& vag_info = vagInfos.at(tone_attribs.vag - 1);
+
 				Vab::VabSound vabsound;
 				vabsound.program = program;
 				vabsound.tone = tone;
+				vabsound.wave.centerNote = tone_attribs.center;
 
-				if (!hdFolder.empty()) {
-					const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
-					if (std::filesystem::exists(hd_path)) {
-						logger->info("Loading HD sound {}", hd_path);
-
-						if (!loadWave(SDL_IOFromFile(hd_path.string().c_str(), "rb"), vabsound.wave)) {
-							logger->error("Failed to load HD sound {}: {}", hd_path, SDL_GetError());
-						}
-
-						vab.sounds.emplace_back(std::move(vabsound));
-						continue;
-					}
-				}
-
+				// The waveform is always decoded, as it tells whether and where the sound loops
 				std::string wav_data;
+				AdpcmLoop loop;
 
 				{
 					logger->info("Creating WAV from VAB data path {}, program {}, tone {}", path, program, tone);
 
-					const VhToneAttributes& tone_attribs = vh.programTones.at(program).toneAttributes.at(tone);
-					const VagInfo& vag_info = vagInfos.at(tone_attribs.vag - 1);
-
 					std::stringstream wav_stream;
+					vb_stream.clear();
 					vb_stream.seekg(vag_info.offset, std::ios::beg);
-					adpcmToWav(vb_stream, vag_info.size, 44100 / 2, wav_stream);
+					loop = adpcmToWav(vb_stream, vag_info.size, SpuSampleRate, wav_stream);
 					wav_data = wav_stream.str();
-
-					if (!loadWave(SDL_IOFromConstMem(wav_data.data(), wav_data.size()), vabsound.wave)) {
-						logger->error("Failed to create WAV for VAB path {}, program {}, tone {}: {}", path, program, tone, SDL_GetError());
-						vab.sounds.emplace_back(std::move(vabsound));
-						continue;
-					}
 				}
 
-				if (!hdFolder.empty()) {
-					const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
+				const std::filesystem::path hd_path = hdFolder / fmt::format("{}_{}_{}.wav", path.stem().string(), program, tone);
+				const bool load_hd = !hdFolder.empty() && std::filesystem::exists(hd_path);
+
+				if (load_hd) {
+					logger->info("Loading HD sound {}", hd_path);
+
+					if (!loadWave(SDL_IOFromFile(hd_path.string().c_str(), "rb"), vabsound.wave)) {
+						logger->error("Failed to load HD sound {}: {}", hd_path, SDL_GetError());
+					}
+				}
+				else if (!loadWave(SDL_IOFromConstMem(wav_data.data(), wav_data.size()), vabsound.wave)) {
+					logger->error("Failed to create WAV for VAB path {}, program {}, tone {}: {}", path, program, tone, SDL_GetError());
+				}
+
+				if (vabsound.wave.valid() && loop.looping && loop.sampleCount > 0) {
+					// The HD sound can have any length and format: keep the loop start at the same relative position
+					const size_t frame_size = SDL_AUDIO_FRAMESIZE(vabsound.wave.spec);
+					const size_t frame_count = vabsound.wave.data.size() / frame_size;
+					vabsound.wave.looping = true;
+					vabsound.wave.loopStart = (loop.startSample * frame_count / loop.sampleCount) * frame_size;
+				}
+
+				if (!hdFolder.empty() && !load_hd && vabsound.wave.valid()) {
 					logger->info("Exporting HD asset {}", hd_path);
 
 					std::filesystem::create_directories(hd_path.parent_path());
@@ -344,6 +384,23 @@ static float shortToFloatVolume(const short volume) {
 	return float(std::clamp<short>(volume, 0, 127)) / 127;
 }
 
+// Called from the audio thread whenever the device wants more than the stream holds: queue the loop again
+static void SDLCALL feedLoopingWave(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount) {
+	const Vab::Wave& wave = *static_cast<const Vab::Wave*>(userdata);
+	const Uint8* loop_data = wave.data.data() + wave.loopStart;
+	const int loop_size = int(wave.data.size() - wave.loopStart);
+
+	if (loop_size <= 0) {
+		return;
+	}
+
+	for (int available = SDL_GetAudioStreamAvailable(stream); available >= 0 && available < total_amount; available = SDL_GetAudioStreamAvailable(stream)) {
+		if (!SDL_PutAudioStreamData(stream, loop_data, loop_size)) {
+			break;
+		}
+	}
+}
+
 Voices::Voices(std::shared_ptr<spdlog::logger> logger) : logger(logger) {
 	const SDL_AudioDeviceID device_id = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
 	if (device_id == 0) {
@@ -363,14 +420,27 @@ Voices::Voice Voices::voiceOn(const Vab& vab, const int program, const int tone,
 		if (stream == nullptr) {
 			const Vab::Wave& wave = vab.getAudio(program, tone);
 			if (device != nullptr && wave.valid()) {
+				// The waveform plays at its own rate on the center note, and one octave higher every 12 notes above it
+				const float pitch = std::pow(2.0f, float(note - wave.centerNote) / 12.0f);
+
 				// The stream converts from the wave format to whatever the device wants once bound.
 				// Destroying it also unbinds it from the device.
 				stream.reset(SDL_CreateAudioStream(&wave.spec, nullptr), &SDL_DestroyAudioStream);
-				if (stream == nullptr
-					|| !SDL_SetAudioStreamGain(stream.get(), shortToFloatVolume(volume))
-					|| !SDL_BindAudioStream(*device, stream.get())
-					|| !SDL_PutAudioStreamData(stream.get(), wave.data.data(), int(wave.data.size()))
-					|| !SDL_FlushAudioStream(stream.get())) {
+				bool playing = stream != nullptr
+					&& SDL_SetAudioStreamGain(stream.get(), shortToFloatVolume(volume))
+					&& SDL_SetAudioStreamFrequencyRatio(stream.get(), pitch)
+					&& SDL_BindAudioStream(*device, stream.get())
+					&& SDL_PutAudioStreamData(stream.get(), wave.data.data(), int(wave.data.size()));
+
+				if (playing && wave.looping) {
+					// Keeps playing the loop until the voice is turned off
+					playing = SDL_SetAudioStreamGetCallback(stream.get(), &feedLoopingWave, const_cast<Vab::Wave*>(&wave));
+				}
+				else if (playing) {
+					playing = SDL_FlushAudioStream(stream.get());
+				}
+
+				if (!playing) {
 					logger->error("Failed to play program {}, tone {}: {}", program, tone, SDL_GetError());
 					stream.reset();
 				}
