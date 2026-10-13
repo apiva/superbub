@@ -6,7 +6,7 @@ This is a modern port of the Net Yaroze classic game *Super Bub*, created by Ale
 
 ### Why?
 
-I - the creator of this port, [Alessandro Piva](https://github.com/apiva) - was 13 when I found Super Bub on a PlayStation Magazine demo disc in 1998. I played it with my sister for a ton of hours, and I have many fond memories of it. I didn't want this game to be forgotten.
+I - the creator of this port - was 13 when I found Super Bub on a PlayStation Magazine demo disc in 1998. I played it with my sister for a ton of hours, and I have many fond memories of it. I didn't want this game to be forgotten.
 
 ### Where did you get the source code?
 
