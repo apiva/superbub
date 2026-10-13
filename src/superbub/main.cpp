@@ -232,8 +232,6 @@ void fetch_input();
 static struct {
 	bool debug = false;
 	bool originalMonsters = false;
-	std::string exportTims;
-	std::string importTims;
 	std::string hd;
 } options;
 
@@ -636,8 +634,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	CLI::App app{ "Super Bub Contest" };
 	app.add_flag("--debug", options.debug, "Enable debug");
 	app.add_flag("--original-monsters", options.originalMonsters, "Use the original monster images instead of the PSM characters");
-	app.add_option("--export-tims", options.exportTims, "Export converted TIMs to specified folder");
-	app.add_option("--import-tims", options.importTims, "Use the images in the specified folder to replace the TIMs");
 	app.add_option("--hd", options.hd, "Folder to export / import HD assets");
 	try {
 		app.parse(argc, argv);
@@ -2780,7 +2776,7 @@ void initialize(void) {
 		gameLog->warn("Failed to enable vsync: {}", SDL_GetError());
 	}
 
-	timLoader.reset(new TimLoader(renderer, timLog, options.exportTims, options.importTims));
+	timLoader.reset(new TimLoader(renderer, timLog, options.hd));
 	vabLoader.reset(new VabLoader(vabLog, options.hd));
 	voices.reset(new Voices(vabLog));
 
@@ -3014,10 +3010,10 @@ void flush_sprites() {
 		SDL_FRect dest;
 		SDL_Color tint{ 255, 255, 255, 255 };
 
-		source.x = sprite->tim->palettedBounds.at(sprite->palette).x + sprite->u;
-		source.y = sprite->tim->palettedBounds.at(sprite->palette).y + sprite->v;
-		source.w = sprite->w;
-		source.h = sprite->h;
+		source.x = (sprite->tim->palettedBounds.at(sprite->palette).x + sprite->u) * sprite->tim->scaleX;
+		source.y = (sprite->tim->palettedBounds.at(sprite->palette).y + sprite->v) * sprite->tim->scaleY;
+		source.w = sprite->w * sprite->tim->scaleX;
+		source.h = sprite->h * sprite->tim->scaleY;
 
 		dest.x = sprite->x;
 		dest.y = sprite->y;

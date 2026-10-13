@@ -21,7 +21,11 @@ public:
 	int logicalHeight = 0;
 	// Owned by the TimLoader that loaded this TIM, and valid only as long as that loader exists
 	SDL_Texture* texture = nullptr;
+	// In logical pixels, one per palette
 	std::vector<SDL_FRect> palettedBounds;
+	// Texture pixels per logical pixel: an HD image can have any size
+	float scaleX = 1;
+	float scaleY = 1;
 
 	bool valid() const {
 		return texture != nullptr;
@@ -32,7 +36,7 @@ public:
 // so it has to be destroyed before the renderer.
 class TimLoader {
 public:
-	TimLoader(SDL_Renderer* renderer, std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& exportPath, const std::filesystem::path& importPath);
+	TimLoader(SDL_Renderer* renderer, std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& hdFolder);
 	~TimLoader();
 
 	TimLoader(const TimLoader&) = delete;
@@ -44,7 +48,6 @@ public:
 private:
 	SDL_Renderer* renderer;
 	std::shared_ptr<spdlog::logger> logger;
-	std::filesystem::path exportPath;
-	std::filesystem::path importPath;
+	std::filesystem::path hdFolder;
 	std::vector<SDL_Texture*> textures;
 };

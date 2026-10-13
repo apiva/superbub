@@ -96,8 +96,8 @@ static Clut morphClut(const Clut& clut, const ClutMorph& morph) {
 	return result;
 }
 
-TimLoader::TimLoader(SDL_Renderer* renderer, std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& exportPath, const std::filesystem::path& importPath)
-	: renderer(renderer), logger(logger), exportPath(exportPath), importPath(importPath) {
+TimLoader::TimLoader(SDL_Renderer* renderer, std::shared_ptr<spdlog::logger> logger, const std::filesystem::path& hdFolder)
+	: renderer(renderer), logger(logger), hdFolder(hdFolder) {
 }
 
 TimLoader::~TimLoader() {
@@ -213,7 +213,26 @@ Tim TimLoader::loadWithMorphedCluts(const std::filesystem::path& path, const std
 			return Tim{};
 		}
 
-		SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface.get());
+		// The TIM is always converted, as it tells the logical size and the number of palettes of the image
+		const std::filesystem::path hd_path = hdFolder / std::filesystem::path(path).replace_extension(".png");
+		const bool load_hd = !hdFolder.empty() && std::filesystem::exists(hd_path);
+
+		std::unique_ptr<SDL_Surface, void(*)(SDL_Surface*)> hd_surface(nullptr, &SDL_DestroySurface);
+		if (load_hd) {
+			logger->info("Loading HD image {}", hd_path.string());
+
+			hd_surface.reset(SDL_LoadPNG(hd_path.string().c_str()));
+			if (hd_surface == nullptr) {
+				logger->error("Failed to load HD image {}: {}", hd_path.string(), SDL_GetError());
+			}
+		}
+
+		// The HD image has the same layout as the converted one, but it can have any size
+		SDL_Surface* const texture_surface = hd_surface != nullptr ? hd_surface.get() : surface.get();
+		tim.scaleX = float(texture_surface->w) / float(complete_width);
+		tim.scaleY = float(texture_surface->h) / float(complete_height);
+
+		SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, texture_surface);
 		if (texture == nullptr) {
 			logger->error("Failed to create texture for TIM {}: {}", path.string(), SDL_GetError());
 		}
@@ -225,13 +244,12 @@ Tim TimLoader::loadWithMorphedCluts(const std::filesystem::path& path, const std
 			tim.texture = texture;
 		}
 
-		if (!exportPath.empty()) {
-			const std::filesystem::path export_filename = exportPath / std::filesystem::path(path).replace_extension(".png");
-			logger->info("Exporting TIM to path {}", export_filename.string());
+		if (!hdFolder.empty() && !load_hd) {
+			logger->info("Exporting HD asset {}", hd_path.string());
 
-			std::filesystem::create_directories(export_filename.parent_path());
-			if (!SDL_SavePNG(surface.get(), export_filename.string().c_str())) {
-				logger->error("Failed to export TIM to path {}: {}", export_filename.string(), SDL_GetError());
+			std::filesystem::create_directories(hd_path.parent_path());
+			if (!SDL_SavePNG(surface.get(), hd_path.string().c_str())) {
+				logger->error("Failed to export HD asset {}: {}", hd_path.string(), SDL_GetError());
 			}
 		}
 
