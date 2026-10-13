@@ -211,6 +211,12 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 
 	initialize();
 
+#ifdef SDL_PLATFORM_EMSCRIPTEN
+	// SDL drops the buttons pressed while the window doesn't have the keyboard focus, and on a phone the page
+	// may never get it: touching the on-screen pad doesn't give it
+	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+#endif
+
 	// The gamepads already plugged in are reported with SDL_EVENT_GAMEPAD_ADDED, like the ones that come later
 	if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) {
 		gameLog->warn("Failed to initialize gamepads: {}", SDL_GetError());
