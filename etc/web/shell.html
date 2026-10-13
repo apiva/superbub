@@ -35,6 +35,11 @@
       .hud .pressed .body { fill: rgba(255, 255, 255, 0.4); stroke: white; }
       .hud .pressed .glyph { stroke: white; }
       .hud .pressed .arrow { fill: white; }
+
+      /* the pad only shows up where the main way to point is a finger, not a mouse */
+      @media not (pointer: coarse) {
+        .hud { display: none; }
+      }
     </style>
   </head>
   <body>
