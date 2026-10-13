@@ -9,7 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "qsincos.h"
+#define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <map>
@@ -625,14 +627,24 @@ unsigned short next_bubblefx = 0;
 
 // Functions //
 
-int main(int argc, char* argv[]) {
+// The logic runs at its own fixed rate, whatever the refresh rate of the display is
+static const Uint64 frame_time = SDL_NS_PER_SECOND / LOGIC_FPS;
+static Uint64 previous_time;
+static Uint64 pending_time;
+
+SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	CLI::App app{ "Super Bub Contest" };
 	app.add_flag("--debug", options.debug, "Enable debug");
 	app.add_flag("--psm-characters", options.psmCharacters, "Use PSM character images");
 	app.add_option("--export-tims", options.exportTims, "Export converted TIMs to specified folder");
 	app.add_option("--import-tims", options.importTims, "Use the images in the specified folder to replace the TIMs");
 	app.add_option("--hd", options.hd, "Folder to export / import HD assets");
-	CLI11_PARSE(app, argc, argv);
+	try {
+		app.parse(argc, argv);
+	}
+	catch (const CLI::ParseError& e) {
+		return app.exit(e) == 0 ? SDL_APP_SUCCESS : SDL_APP_FAILURE;
+	}
 
 	initialize();
 
@@ -642,76 +654,71 @@ int main(int argc, char* argv[]) {
 
 	//	printf("Main Loop.\n");
 
-	// The logic runs at its own fixed rate, whatever the refresh rate of the display is
-	const Uint64 frame_time = SDL_NS_PER_SECOND / LOGIC_FPS;
-	Uint64 previous_time = SDL_GetTicksNS();
-	Uint64 pending_time = frame_time;
-	bool running = true;
+	previous_time = SDL_GetTicksNS();
+	pending_time = frame_time;
 
-	while (running) {
-		SDL_PumpEvents();
+	return SDL_APP_CONTINUE;
+}
 
-		// The window is closed with its close button or the Escape key
-		bool should_close = false;
-
-		SDL_Event event;
-		while (SDL_PollEvent(&event)) {
-			if (event.type == SDL_EVENT_QUIT) {
-				should_close = true;
-			}
-			else if (event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_SCANCODE_ESCAPE) {
-				should_close = true;
-			}
-		}
-
-		if (should_close) {
-			break;
-		}
-
-		const Uint64 current_time = SDL_GetTicksNS();
-		pending_time = std::min(pending_time + (current_time - previous_time), frame_time * MAX_PENDING_FRAMES);
-		previous_time = current_time;
-
-		while (pending_time >= frame_time) {
-			pending_time -= frame_time;
-
-			// Every logic frame draws the whole screen again
-			clear_sprites();
-
-			fetch_input();
-
-			read_pads();
-			if (pad[0].keys == (PAD_SELECT | PAD_START)) {
-				running = false;
-				break;
-			}
-			process_pads();
-			if (pad[0].pulse == (PAD_L1 | PAD_R1))
-				options.debug = !options.debug;
-
-			update_music();
-			update_sfx();
-
-			update_anitext();
-
-			(*game.mode_func)();
-
-			gameLog->trace("FRAME: {}", frame);
-
-			frame++;
-		}
-
-		// Shows the last logic frame: again, if no new one was due yet
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-		SDL_RenderClear(renderer);
-
-		flush_sprites();
-
-		SDL_RenderPresent(renderer);
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
+	// The window is closed with its close button or the Escape key
+	if (event->type == SDL_EVENT_QUIT) {
+		return SDL_APP_SUCCESS;
+	}
+	else if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
+		return SDL_APP_SUCCESS;
 	}
 
+	return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppIterate(void* appstate) {
+	const Uint64 current_time = SDL_GetTicksNS();
+	pending_time = std::min(pending_time + (current_time - previous_time), frame_time * MAX_PENDING_FRAMES);
+	previous_time = current_time;
+
+	while (pending_time >= frame_time) {
+		pending_time -= frame_time;
+
+		// Every logic frame draws the whole screen again
+		clear_sprites();
+
+		fetch_input();
+
+		read_pads();
+		if (pad[0].keys == (PAD_SELECT | PAD_START)) {
+			return SDL_APP_SUCCESS;
+		}
+		process_pads();
+		if (pad[0].pulse == (PAD_L1 | PAD_R1))
+			options.debug = !options.debug;
+
+		update_music();
+		update_sfx();
+
+		update_anitext();
+
+		(*game.mode_func)();
+
+		gameLog->trace("FRAME: {}", frame);
+
+		frame++;
+	}
+
+	// Shows the last logic frame: again, if no new one was due yet
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+	SDL_RenderClear(renderer);
+
+	flush_sprites();
+
+	SDL_RenderPresent(renderer);
+
+	return SDL_APP_CONTINUE;
+}
+
+// Also called when SDL_AppInit() stops early, before initialize() has run
+void SDL_AppQuit(void* appstate, SDL_AppResult result) {
 	shutdown();
-	return(0);
 }
 
 
