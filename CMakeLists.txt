@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.21 )
 set( CMAKE_CXX_STANDARD 17 )
-project( superbub VERSION 0.1 )
+project( superbub VERSION 1.01 )
 
 set( SDL_SHARED OFF CACHE BOOL "" FORCE )
 set( SDL_STATIC ON CACHE BOOL "" FORCE )
