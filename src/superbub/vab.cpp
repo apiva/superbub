@@ -254,7 +254,7 @@ VabLoader::VabLoader(std::shared_ptr<spdlog::logger> logger, const std::filesyst
 
 Vab VabLoader::load(const std::filesystem::path& path) {
 	const std::filesystem::path vh_path = path;
-	const std::filesystem::path vb_path = std::filesystem::path(vh_path).replace_extension(".vb");
+	const std::filesystem::path vb_path = std::filesystem::path(vh_path).replace_extension(".VB");
 
 	Vab vab;
 	VhFile vh;
