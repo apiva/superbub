@@ -93,6 +93,46 @@ static const Uint64 frame_time = SDL_NS_PER_SECOND / LOGIC_FPS;
 static Uint64 previous_time;
 static Uint64 pending_time;
 
+// Gamepad Stuff //
+
+// How far a stick or a trigger must be pushed to count as pressed
+#define STICK_THRESHOLD 16384
+#define TRIGGER_THRESHOLD 16384
+
+// The first gamepad plugged in goes to player 1, the second one to player 2
+static SDL_Gamepad* gamepads[2] = { nullptr, nullptr };
+
+static void add_gamepad(SDL_JoystickID id) {
+	for (SDL_Gamepad* gamepad : gamepads) {
+		if (gamepad && SDL_GetGamepadID(gamepad) == id) {
+			return;
+		}
+	}
+
+	for (int p = 0; p < 2; p++) {
+		if (gamepads[p] == nullptr) {
+			gamepads[p] = SDL_OpenGamepad(id);
+			if (gamepads[p]) {
+				gameLog->info("Player {} uses gamepad: {}", p + 1, SDL_GetGamepadName(gamepads[p]));
+			}
+			else {
+				gameLog->warn("Failed to open gamepad: {}", SDL_GetError());
+			}
+			return;
+		}
+	}
+}
+
+static void remove_gamepad(SDL_JoystickID id) {
+	for (int p = 0; p < 2; p++) {
+		if (gamepads[p] && SDL_GetGamepadID(gamepads[p]) == id) {
+			gameLog->info("Player {} lost the gamepad", p + 1);
+			SDL_CloseGamepad(gamepads[p]);
+			gamepads[p] = nullptr;
+		}
+	}
+}
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	CLI::App app{ "Super Bub Contest" };
 	app.add_flag("--debug", options.debug, "Enable debug");
@@ -106,6 +146,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	}
 
 	initialize();
+
+	// The gamepads already plugged in are reported with SDL_EVENT_GAMEPAD_ADDED, like the ones that come later
+	if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) {
+		gameLog->warn("Failed to initialize gamepads: {}", SDL_GetError());
+	}
 
 	frame = 0;
 
@@ -126,6 +171,12 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 	}
 	else if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
 		return SDL_APP_SUCCESS;
+	}
+	else if (event->type == SDL_EVENT_GAMEPAD_ADDED) {
+		add_gamepad(event->gdevice.which);
+	}
+	else if (event->type == SDL_EVENT_GAMEPAD_REMOVED) {
+		remove_gamepad(event->gdevice.which);
 	}
 
 	return SDL_APP_CONTINUE;
@@ -177,7 +228,62 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 // Also called when SDL_AppInit() stops early, before initialize() has run
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
+	for (SDL_Gamepad*& gamepad : gamepads) {
+		if (gamepad) {
+			SDL_CloseGamepad(gamepad);
+			gamepad = nullptr;
+		}
+	}
+
 	shutdown();
+}
+
+// The buttons are matched by their position, so that the layout is the one of the PSX pad
+static uint16_t gamepad_keys(SDL_Gamepad* gamepad) {
+	const std::map<SDL_GamepadButton, uint16_t> buttons{
+		{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, PAD_L1 },
+		{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, PAD_R1 },
+		{SDL_GAMEPAD_BUTTON_NORTH, PAD_TRIANGLE },
+		{SDL_GAMEPAD_BUTTON_EAST, PAD_CIRCLE },
+		{SDL_GAMEPAD_BUTTON_SOUTH, PAD_X },
+		{SDL_GAMEPAD_BUTTON_WEST, PAD_SQUARE },
+		{SDL_GAMEPAD_BUTTON_BACK, PAD_SELECT },
+		{SDL_GAMEPAD_BUTTON_START, PAD_START },
+		{SDL_GAMEPAD_BUTTON_DPAD_UP, PAD_UP },
+		{SDL_GAMEPAD_BUTTON_DPAD_RIGHT, PAD_RIGHT },
+		{SDL_GAMEPAD_BUTTON_DPAD_DOWN, PAD_DOWN },
+		{SDL_GAMEPAD_BUTTON_DPAD_LEFT, PAD_LEFT },
+	};
+
+	uint16_t keys = 0;
+	if (gamepad == nullptr) {
+		return keys;
+	}
+
+	for (const auto& entry : buttons) {
+		if (SDL_GetGamepadButton(gamepad, entry.first)) {
+			keys |= entry.second;
+		}
+	}
+
+	if (SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) > TRIGGER_THRESHOLD)
+		keys |= PAD_L2;
+	if (SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) > TRIGGER_THRESHOLD)
+		keys |= PAD_R2;
+
+	// The left stick works as the directional pad
+	const Sint16 stick_x = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX);
+	const Sint16 stick_y = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY);
+	if (stick_x < -STICK_THRESHOLD)
+		keys |= PAD_LEFT;
+	if (stick_x > STICK_THRESHOLD)
+		keys |= PAD_RIGHT;
+	if (stick_y < -STICK_THRESHOLD)
+		keys |= PAD_UP;
+	if (stick_y > STICK_THRESHOLD)
+		keys |= PAD_DOWN;
+
+	return keys;
 }
 
 void fetch_input() {
@@ -203,12 +309,13 @@ void fetch_input() {
 	constexpr uint32_t terminal_standard_pad = 0x4 << 12;
 	constexpr uint32_t data_size_2bytes = 0x2 << 8;
 
+	// Player 1 always has a controller, as the keyboard works along with the gamepad
 	pad_buffer_1 = with_controller | terminal_standard_pad | data_size_2bytes;
 
 	{
 		const bool* key_states = SDL_GetKeyboardState(nullptr);
 
-		uint16_t payload = 0;
+		uint16_t payload = gamepad_keys(gamepads[0]);
 		for (const auto& entry : player_1_keys) {
 			if (key_states[entry.first]) {
 				payload |= entry.second;
@@ -219,5 +326,14 @@ void fetch_input() {
 		pad_buffer_1 |= uint32_t(~payload) << 16;
 	}
 
-	pad_buffer_2 = without_controller;
+	if (gamepads[1]) {
+		pad_buffer_2 = with_controller | terminal_standard_pad | data_size_2bytes;
+
+		uint16_t payload = gamepad_keys(gamepads[1]);
+		payload = ((payload & 0x00ff) << 8) | ((payload & 0xff00) >> 8);
+		pad_buffer_2 |= uint32_t(~payload) << 16;
+	}
+	else {
+		pad_buffer_2 = without_controller;
+	}
 }
