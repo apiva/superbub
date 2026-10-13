@@ -8,30 +8,56 @@
   "configurePresets": [
     {
       "name": "windows-dev",
-      "displayName": "Windows (Dev)",
       "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/temp/build/${presetName}",
       "installDir": "${sourceDir}/temp/install/${presetName}"
     },
     {
       "name": "windows-release",
-      "displayName": "Windows (Release)",
       "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/temp/build/${presetName}",
       "installDir": "${sourceDir}/temp/install/${presetName}"
+    },
+    {
+      "name": "web-dev",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/temp/build/${presetName}",
+      "installDir": "${sourceDir}/temp/install/${presetName}",
+      "toolchainFile": "D:/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_EXE_LINKER_FLAGS": "-sALLOW_MEMORY_GROWTH --embed-file ${sourceDir}/build@/"
+      }
+    },
+    {
+      "name": "web-release",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/temp/build/${presetName}",
+      "installDir": "${sourceDir}/temp/install/${presetName}",
+      "toolchainFile": "D:/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_EXE_LINKER_FLAGS": "-sALLOW_MEMORY_GROWTH --embed-file ${sourceDir}/build@/"
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "windows-dev",
-      "displayName": "Windows (Dev)",
       "configurePreset": "windows-dev",
       "configuration": "Debug"
     },
     {
       "name": "windows-release",
-      "displayName": "Windows (Release)",
       "configurePreset": "windows-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "web-dev",
+      "configurePreset": "web-dev",
+      "configuration": "Debug"
+    },
+    {
+      "name": "web-release",
+      "configurePreset": "web-release",
       "configuration": "Release"
     }
   ]

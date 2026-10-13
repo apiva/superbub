@@ -11,3 +11,8 @@ add_subdirectory( ext/CLI11 EXCLUDE_FROM_ALL )
 add_executable( superbub src/superbub/main.cpp src/superbub/qsincos.cpp src/superbub/qsincos.h src/superbub/tim.hpp src/superbub/tim.cpp src/superbub/vab.hpp src/superbub/vab.cpp )
 target_include_directories( superbub PUBLIC src/superbub )
 target_link_libraries( superbub PUBLIC SDL3::SDL3 spdlog CLI11::CLI11 )
+
+if ( "${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten" )
+	set_property( TARGET superbub PROPERTY OUTPUT_NAME index )
+	set_property( TARGET superbub PROPERTY SUFFIX .html )
+endif()
