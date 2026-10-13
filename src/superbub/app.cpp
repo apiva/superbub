@@ -13,6 +13,9 @@
 #include <memory>
 #include <string>
 #include <CLI/CLI.hpp>
+#ifdef SDL_PLATFORM_EMSCRIPTEN
+#include <emscripten.h>
+#endif
 
 // Defined in main.cpp: keep the types and constants in sync //
 
@@ -133,6 +136,67 @@ static void remove_gamepad(SDL_JoystickID id) {
 	}
 }
 
+#ifdef SDL_PLATFORM_EMSCRIPTEN
+
+// On-screen pad Stuff //
+
+// The web page draws a pad over the game, for touch screens: here it's turned into a virtual joystick,
+// so that the game handles it as any other gamepad
+
+// The keys held down on the pad, in the bits set by the page, or -1 until the pad is touched for the first time
+EM_JS(int, hud_key_mask, (), {
+	return (typeof Module['hudKeyMask'] === 'number') ? Module['hudKeyMask'] : -1;
+});
+
+static SDL_JoystickID hud_joystick = 0;
+static bool hud_joystick_failed = false;
+
+// Called by SDL whenever it reads the state of the joysticks
+static void SDLCALL update_hud_joystick(void* userdata) {
+	// In the order of the bits set by the page
+	const SDL_GamepadButton buttons[] = {
+		SDL_GAMEPAD_BUTTON_DPAD_UP,
+		SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
+		SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+		SDL_GAMEPAD_BUTTON_DPAD_LEFT,
+		SDL_GAMEPAD_BUTTON_SOUTH,
+		SDL_GAMEPAD_BUTTON_EAST,
+	};
+
+	SDL_Joystick* joystick = SDL_GetJoystickFromID(hud_joystick);
+	const int keys = hud_key_mask();
+	if (joystick == nullptr || keys < 0) {
+		return;
+	}
+
+	for (int b = 0; b < SDL_arraysize(buttons); b++) {
+		SDL_SetJoystickVirtualButton(joystick, buttons[b], (keys & (1 << b)) != 0);
+	}
+}
+
+// The pad becomes a gamepad only once it's used, so that it doesn't take the place of a real one for nothing
+static void attach_hud_joystick() {
+	if (hud_joystick != 0 || hud_joystick_failed || hud_key_mask() < 0) {
+		return;
+	}
+
+	SDL_VirtualJoystickDesc desc;
+	SDL_INIT_INTERFACE(&desc);
+	desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
+	// All the buttons up to the directional pad, so that their indices are the values of SDL_GamepadButton
+	desc.nbuttons = SDL_GAMEPAD_BUTTON_DPAD_RIGHT + 1;
+	desc.name = "On-screen pad";
+	desc.Update = update_hud_joystick;
+
+	hud_joystick = SDL_AttachVirtualJoystick(&desc);
+	if (hud_joystick == 0) {
+		gameLog->warn("Failed to attach the on-screen pad: {}", SDL_GetError());
+		hud_joystick_failed = true;
+	}
+}
+
+#endif
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	CLI::App app{ "Super Bub Contest" };
 	app.add_flag("--debug", options.debug, "Enable debug");
@@ -183,6 +247,10 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
+#ifdef SDL_PLATFORM_EMSCRIPTEN
+	attach_hud_joystick();
+#endif
+
 	const Uint64 current_time = SDL_GetTicksNS();
 	pending_time = std::min(pending_time + (current_time - previous_time), frame_time * MAX_PENDING_FRAMES);
 	previous_time = current_time;

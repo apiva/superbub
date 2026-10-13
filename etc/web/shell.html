@@ -10,12 +10,31 @@
       canvas { display: block; width: 100vw; height: 100vh; border: 0px none; outline: none; background-color: black; }
 
       #fullscreen {
-        position: fixed; right: 12px; bottom: 12px; width: 40px; height: 40px; padding: 8px;
+        position: fixed; right: 12px; top: 12px; width: 40px; height: 40px; padding: 8px;
         border: 0px none; border-radius: 6px; background-color: transparent; color: white;
         opacity: 0.4; cursor: pointer;
       }
       #fullscreen:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.15); }
       #fullscreen svg { display: block; width: 100%; height: 100%; }
+
+      /* the on-screen pad: it must not scroll, zoom or select anything when touched */
+      .hud {
+        position: fixed; bottom: calc(16px + env(safe-area-inset-bottom)); width: clamp(120px, 38vmin, 200px);
+        touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent; cursor: pointer;
+      }
+      .hud svg { display: block; width: 100%; height: auto; overflow: visible; }
+      #hud-dpad { left: calc(16px + env(safe-area-inset-left)); }
+      #hud-buttons { right: calc(16px + env(safe-area-inset-right)); }
+
+      .hud .body { fill: rgba(255, 255, 255, 0.08); stroke: rgba(255, 255, 255, 0.5); stroke-width: 2; stroke-linejoin: round; }
+      .hud .glyph { fill: none; stroke: rgba(255, 255, 255, 0.7); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .hud .arrow { fill: rgba(255, 255, 255, 0.7); stroke-width: 2; }
+      .hud [data-key="x"] .glyph { stroke: #8fb8ff; }
+      .hud [data-key="circle"] .glyph { stroke: #ff8f8f; }
+      .hud .pressed .body { fill: rgba(255, 255, 255, 0.4); stroke: white; }
+      .hud .pressed .glyph { stroke: white; }
+      .hud .pressed .arrow { fill: white; }
     </style>
   </head>
   <body>
@@ -25,6 +44,38 @@
         <path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/>
       </svg>
     </button>
+    <div id="hud-dpad" class="hud" oncontextmenu="event.preventDefault()">
+      <svg viewBox="0 0 100 100">
+        <g data-key="up">
+          <path class="body" d="M36 6H64V34L50 48L36 34Z"/>
+          <path class="glyph arrow" d="M50 13L57 24H43Z"/>
+        </g>
+        <g data-key="right">
+          <path class="body" d="M94 36V64H66L52 50L66 36Z"/>
+          <path class="glyph arrow" d="M87 50L76 57V43Z"/>
+        </g>
+        <g data-key="down">
+          <path class="body" d="M36 94H64V66L50 52L36 66Z"/>
+          <path class="glyph arrow" d="M50 87L57 76H43Z"/>
+        </g>
+        <g data-key="left">
+          <path class="body" d="M6 36V64H34L48 50L34 36Z"/>
+          <path class="glyph arrow" d="M13 50L24 57V43Z"/>
+        </g>
+      </svg>
+    </div>
+    <div id="hud-buttons" class="hud" oncontextmenu="event.preventDefault()">
+      <svg viewBox="0 0 100 100">
+        <g data-key="x">
+          <circle class="body" cx="30" cy="68" r="24"/>
+          <path class="glyph" d="M22 60L38 76M38 60L22 76"/>
+        </g>
+        <g data-key="circle">
+          <circle class="body" cx="72" cy="30" r="24"/>
+          <circle class="glyph" cx="72" cy="30" r="10"/>
+        </g>
+      </svg>
+    </div>
     <script type='text/javascript'>
       var Module = {
         canvas: document.getElementById('canvas')
@@ -41,6 +92,83 @@
         // Otherwise the button would keep the focus, and Enter or Space pressed while playing would click it again
         fullscreenElement.blur();
       });
+
+      // The on-screen pad: which of its keys are held down right now
+      var hudKeys = { up: false, right: false, down: false, left: false, x: false, circle: false };
+      // The key that every finger (or the mouse) is holding, if any
+      var hudPointers = new Map();
+
+      // The position is in the coordinates of the SVG, whose view box is 100 units wide and tall
+      function hudDpadKeyAt(x, y) {
+        var dx = x - 50, dy = y - 50;
+        if (Math.hypot(dx, dy) < 8) {
+          return null;
+        }
+        // Only one direction at a time, and the finger can slide past the edge without letting it go
+        if (Math.abs(dx) > Math.abs(dy)) {
+          return dx > 0 ? 'right' : 'left';
+        }
+        return dy > 0 ? 'down' : 'up';
+      }
+
+      function hudButtonKeyAt(x, y) {
+        if (Math.hypot(x - 30, y - 68) <= 28) {
+          return 'x';
+        }
+        if (Math.hypot(x - 72, y - 30) <= 28) {
+          return 'circle';
+        }
+        return null;
+      }
+
+      function updateHud() {
+        var held = Array.from(hudPointers.values());
+        var mask = 0, bit = 1;
+        for (var key in hudKeys) {
+          hudKeys[key] = held.includes(key);
+          document.querySelector('.hud [data-key="' + key + '"]').classList.toggle('pressed', hudKeys[key]);
+          if (hudKeys[key]) {
+            mask |= bit;
+          }
+          bit <<= 1;
+        }
+        // Read by the game, that turns the pad into a gamepad: one bit per key, in the order of hudKeys
+        Module.hudKeyMask = mask;
+      }
+
+      function setupHud(element, keyAt) {
+        var svg = element.querySelector('svg');
+
+        function track(event) {
+          var bounds = svg.getBoundingClientRect();
+          var x = (event.clientX - bounds.left) / bounds.width * 100;
+          var y = (event.clientY - bounds.top) / bounds.height * 100;
+          hudPointers.set(event.pointerId, keyAt(x, y));
+          updateHud();
+        }
+
+        function release(event) {
+          hudPointers.delete(event.pointerId);
+          updateHud();
+        }
+
+        element.addEventListener('pointerdown', (event) => {
+          // Keeps the keyboard focus where it is, and the pointer on the pad even when it slides out of it
+          event.preventDefault();
+          element.setPointerCapture(event.pointerId);
+          track(event);
+        });
+        element.addEventListener('pointermove', (event) => {
+          if (hudPointers.has(event.pointerId)) {
+            track(event);
+          }
+        });
+        element.addEventListener('pointerup', release);
+        element.addEventListener('pointercancel', release);
+      }
+
+      setupHud(document.getElementById('hud-dpad'), hudDpadKeyAt);
+      setupHud(document.getElementById('hud-buttons'), hudButtonKeyAt);
     </script>
     {{{ SCRIPT }}}
   </body>
