@@ -4,6 +4,10 @@
 
 This is a modern port of the Net Yaroze classic game *Super Bub*, created by Alex Herbert in 1998. "Modern port" means that the original code has been adapted to modern compilers and platforms, and can be built and run natively (as of 2026).
 
+### How can I play it?
+
+Download a binary in the [Releases](https://github.com/apiva/superbub/releases) page, or directly on the web at [https://apiva.github.io/superbub](https://apiva.github.io/superbub) (even on mobile).
+
 ### Why?
 
 I - the creator of this port - was 13 when I found Super Bub on a PlayStation Magazine demo disc in 1998. I played it with my sister for a ton of hours, and I have many fond memories of it. I didn't want this game to be forgotten.
