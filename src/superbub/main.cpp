@@ -3022,9 +3022,9 @@ void flush_sprites() {
 			const float g_fact = float(sprite->g) / 128.0f;
 			const float b_fact = float(sprite->b) / 128.0f;
 
-			tint.r = unsigned char(std::clamp(int(r_fact * 255), 0, 255));
-			tint.g = unsigned char(std::clamp(int(g_fact * 255), 0, 255));
-			tint.b = unsigned char(std::clamp(int(b_fact * 255), 0, 255));
+			tint.r = static_cast<unsigned char>(std::clamp(int(r_fact * 255), 0, 255));
+			tint.g = static_cast<unsigned char>(std::clamp(int(g_fact * 255), 0, 255));
+			tint.b = static_cast<unsigned char>(std::clamp(int(b_fact * 255), 0, 255));
 		}
 
 		SDL_SetTextureColorMod(sprite->tim->texture, tint.r, tint.g, tint.b);

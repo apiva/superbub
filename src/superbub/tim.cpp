@@ -150,7 +150,7 @@ Tim TimLoader::loadWithMorphedCluts(const std::filesystem::path& path, const std
 		}
 
 		logger->info("File read successfully");
-		logger->debug("TIM tag = {}, version = {}, flags = {}, colorMode = {}, hasClut = {}", timfile.timHeader.tag, timfile.timHeader.version, timfile.timHeader.flags, unsigned int(getColorMode(timfile.timHeader)), hasClut(timfile.timHeader));
+		logger->debug("TIM tag = {}, version = {}, flags = {}, colorMode = {}, hasClut = {}", timfile.timHeader.tag, timfile.timHeader.version, timfile.timHeader.flags, static_cast<unsigned int>(getColorMode(timfile.timHeader)), hasClut(timfile.timHeader));
 		logger->debug("CLUT length = {}, x = {}, y = {}, width = {}, height = {}", timfile.clutHeader.clutLength, timfile.clutHeader.x, timfile.clutHeader.y, timfile.clutHeader.width, timfile.clutHeader.height);
 		logger->debug("CLUT data size = {}", sizeof(uint16_t) * timfile.clutHeader.width * timfile.clutHeader.height);
 		logger->debug("Image length = {}, x = {}, y = {}, width = {}, height = {}", timfile.imageHeader.clutLength, timfile.imageHeader.x, timfile.imageHeader.y, timfile.imageHeader.width, timfile.imageHeader.height);
