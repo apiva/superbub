@@ -10,13 +10,21 @@
       "name": "windows-dev",
       "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/temp/build/${presetName}",
-      "installDir": "${sourceDir}/temp/install/${presetName}"
+      "installDir": "${sourceDir}/temp/install/${presetName}",
+      "cacheVariables": {
+        "CPACK_GENERATOR": "ZIP",
+        "CPACK_PACKAGE_DIRECTORY": "${sourceDir}/temp/package/${presetName}"
+      }
     },
     {
       "name": "windows-release",
       "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/temp/build/${presetName}",
-      "installDir": "${sourceDir}/temp/install/${presetName}"
+      "installDir": "${sourceDir}/temp/install/${presetName}",
+      "cacheVariables": {
+        "CPACK_GENERATOR": "ZIP",
+        "CPACK_PACKAGE_DIRECTORY": "${sourceDir}/temp/package/${presetName}"
+      }
     },
     {
       "name": "web-dev",
