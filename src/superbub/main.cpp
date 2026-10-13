@@ -231,7 +231,7 @@ void fetch_input();
 
 static struct {
 	bool debug = false;
-	bool psmCharacters = false;
+	bool originalMonsters = false;
 	std::string exportTims;
 	std::string importTims;
 	std::string hd;
@@ -635,7 +635,7 @@ static Uint64 pending_time;
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	CLI::App app{ "Super Bub Contest" };
 	app.add_flag("--debug", options.debug, "Enable debug");
-	app.add_flag("--psm-characters", options.psmCharacters, "Use PSM character images");
+	app.add_flag("--original-monsters", options.originalMonsters, "Use the original monster images instead of the PSM characters");
 	app.add_option("--export-tims", options.exportTims, "Export converted TIMs to specified folder");
 	app.add_option("--import-tims", options.importTims, "Use the images in the specified folder to replace the TIMs");
 	app.add_option("--hd", options.hd, "Folder to export / import HD assets");
@@ -2890,23 +2890,23 @@ void init_tims(void) {
 		ClutMorph{ 128, 0, 0, 0, 128, 0, 0, 0, 128},
 		ClutMorph{ 128, 0, 0, 0, 0, 128, 0, 128, 0},
 	};
-	const std::initializer_list<ClutMorph>& monster_cluts = options.psmCharacters ? psm_monster_cluts : original_monster_cluts;
+	const std::initializer_list<ClutMorph>& monster_cluts = options.originalMonsters ? original_monster_cluts : psm_monster_cluts;
 
-	const std::string choice_pic = options.psmCharacters ? "Choice01.tim" : "IMONST02.TIM";
+	const std::string choice_pic = options.originalMonsters ? "IMONST02.TIM" : "Choice01.tim";
 	monsticon_tim = timLoader->loadWithMorphedCluts(choice_pic, monster_cluts, false);
 	init_sprite(&monsticon_tim, &monsticon_spt);
 	monsticon_spt.w = 128;
 	monsticon_spt.h = 128;
 
-	std::string monster_pic0 = "Monst01.tim";
-	std::string monster_pic1 = "Monst02.tim";
-	std::string monster_pic2 = "Monst03.tim";
-	std::string monster_pic3 = "Monst04.tim";
-	if (options.psmCharacters) {
-		monster_pic0 = "Pig01.tim";
-		monster_pic1 = "Lion01.tim";
-		monster_pic2 = "Frog01.tim";
-		monster_pic3 = "Spook01.tim";
+	std::string monster_pic0 = "Pig01.tim";
+	std::string monster_pic1 = "Lion01.tim";
+	std::string monster_pic2 = "Frog01.tim";
+	std::string monster_pic3 = "Spook01.tim";
+	if (options.originalMonsters) {
+		monster_pic0 = "Monst01.tim";
+		monster_pic1 = "Monst02.tim";
+		monster_pic2 = "Monst03.tim";
+		monster_pic3 = "Monst04.tim";
 	}
 
 	monster_tim[0] = timLoader->loadWithMorphedCluts(monster_pic0, monster_cluts, false);
