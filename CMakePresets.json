@@ -25,7 +25,7 @@
       "installDir": "${sourceDir}/temp/install/${presetName}",
       "toolchainFile": "D:/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
-        "CMAKE_EXE_LINKER_FLAGS": "-sALLOW_MEMORY_GROWTH --embed-file ${sourceDir}/build@/"
+        "CMAKE_EXE_LINKER_FLAGS": "-sALLOW_MEMORY_GROWTH --embed-file ${sourceDir}/build@/ --shell-file ${sourceDir}/etc/web/shell.html"
       }
     },
     {
@@ -35,7 +35,7 @@
       "installDir": "${sourceDir}/temp/install/${presetName}",
       "toolchainFile": "D:/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
-        "CMAKE_EXE_LINKER_FLAGS": "-sALLOW_MEMORY_GROWTH --embed-file ${sourceDir}/build@/"
+        "CMAKE_EXE_LINKER_FLAGS": "-sALLOW_MEMORY_GROWTH --embed-file ${sourceDir}/build@/ --shell-file ${sourceDir}/etc/web/shell.html"
       }
     }
   ],

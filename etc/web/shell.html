@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Super Bub Contest</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background-color: black; }
+      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+      canvas { display: block; width: 100vw; height: 100vh; border: 0px none; outline: none; background-color: black; }
+
+      #fullscreen {
+        position: fixed; right: 12px; bottom: 12px; width: 40px; height: 40px; padding: 8px;
+        border: 0px none; border-radius: 6px; background-color: transparent; color: white;
+        opacity: 0.4; cursor: pointer;
+      }
+      #fullscreen:hover { opacity: 1; background-color: rgba(255, 255, 255, 0.15); }
+      #fullscreen svg { display: block; width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <button id="fullscreen" type="button" title="Fullscreen" aria-label="Fullscreen" tabindex=-1>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/>
+      </svg>
+    </button>
+    <script type='text/javascript'>
+      var Module = {
+        canvas: document.getElementById('canvas')
+      };
+
+      // The whole page goes fullscreen, not just the canvas, so that the button stays available to go back
+      var fullscreenElement = document.getElementById('fullscreen');
+      fullscreenElement.addEventListener('click', () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen();
+        }
+        // Otherwise the button would keep the focus, and Enter or Space pressed while playing would click it again
+        fullscreenElement.blur();
+      });
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
